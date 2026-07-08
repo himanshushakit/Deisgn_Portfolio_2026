@@ -71,7 +71,7 @@ const WEATHER = {
       sunDir:   [0.34, 0.55, -0.76],  // up + slightly right + toward the window (-Z)
       sunColor: [1.0, 0.95, 0.84],
       sunSize:  0.006,
-      cloud:    0.55,                 // coverage 0..1
+      cloud:    0.40,                 // coverage 0..1 — mostly blue with a few puffy clouds
       cloudColor: [1.0, 1.0, 1.0],
       cloudSpeed: 0.008,
     },
@@ -112,14 +112,19 @@ void main(){
   float disc = smoothstep(1.0 - uSunSize, 1.0 - uSunSize*0.25, sd);
   float glow = pow(sd, 8.0)*0.35 + pow(sd, 160.0)*0.9;
   sky += uSunColor * (disc*1.3 + glow);
-  // clouds: project the view dir onto a sky plane and sample drifting fbm
-  vec2 uv = d.xz / (d.y*1.4 + 0.35);
-  float n = fbm(uv*1.6 + vec2(uTime*uCloudSpeed, uTime*uCloudSpeed*0.6));
+  // clouds: big puffy cumulus. Low-freq base shape + higher-freq detail, tight
+  // smoothstep => defined billowy edges rather than a thin haze.
+  vec2 uv = d.xz / (d.y*1.2 + 0.30);
+  float base = fbm(uv*0.85 + vec2(uTime*uCloudSpeed, uTime*uCloudSpeed*0.5));
+  float detail = fbm(uv*2.3 + 3.0);
+  float n = base*0.78 + detail*0.22;
   float cover = 1.0 - uCloud;
-  float cl = smoothstep(cover, cover+0.35, n) * smoothstep(0.02, 0.22, d.y);
-  // sun tints the clouds slightly warm near it
-  vec3 cc = mix(uCloudColor, uSunColor, glow*0.6);
-  sky = mix(sky, cc, clamp(cl, 0.0, 1.0)*0.92);
+  float cl = smoothstep(cover, cover+0.16, n) * smoothstep(0.02, 0.20, d.y);
+  // shade cloud undersides slightly, brighten tops toward the sun for volume
+  float shade = smoothstep(cover-0.05, cover+0.30, n);
+  vec3 cc = mix(uCloudColor*0.82, uCloudColor, shade);
+  cc = mix(cc, uSunColor, glow*0.5);
+  sky = mix(sky, cc, clamp(cl, 0.0, 1.0)*0.96);
   gl_FragColor = vec4(sky, 1.0);
 }
 `
