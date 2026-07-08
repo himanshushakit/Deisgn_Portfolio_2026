@@ -191,7 +191,7 @@ const smootherstep = (x) => {
 }
 
 // Bump GLB_VERSION whenever scene.glb is re-exported so the browser can't serve a stale cached copy.
-const GLB_URL = '/scene.glb?v=27'
+const GLB_URL = '/scene.glb?v=28'
 
 function DeskScene() {
   const { scene } = useGLTF(GLB_URL)
