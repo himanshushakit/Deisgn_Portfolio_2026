@@ -66,12 +66,12 @@ function Steam({ position }) {
 const WEATHER = {
   sunnyMorning: {
     sky: {
-      top:      [0.22, 0.48, 0.86],   // zenith blue
-      horizon:  [0.78, 0.86, 0.95],   // pale horizon
+      top:      [0.12, 0.40, 0.88],   // zenith blue — saturated to survive ACES desaturation
+      horizon:  [0.60, 0.79, 0.97],   // clean blue horizon (less milky white)
       sunDir:   [0.34, 0.55, -0.76],  // up + slightly right + toward the window (-Z)
-      sunColor: [1.0, 0.96, 0.86],
+      sunColor: [1.0, 0.95, 0.84],
       sunSize:  0.006,
-      cloud:    0.5,                  // coverage 0..1
+      cloud:    0.55,                 // coverage 0..1
       cloudColor: [1.0, 1.0, 1.0],
       cloudSpeed: 0.008,
     },
@@ -104,8 +104,9 @@ float noise(vec2 p){ vec2 i=floor(p), f=fract(p); f=f*f*(3.0-2.0*f);
 float fbm(vec2 p){ float v=0.0, a=0.5; for(int i=0;i<5;i++){ v+=a*noise(p); p*=2.02; a*=0.5;} return v; }
 void main(){
   vec3 d = normalize(vDir);
-  // vertical gradient by elevation
-  vec3 sky = mix(uHorizon, uTop, smoothstep(-0.05, 0.75, d.y));
+  // vertical gradient by elevation — reach the saturated zenith colour sooner so the
+  // mid-sky visible through the window reads as blue, not pale horizon.
+  vec3 sky = mix(uHorizon, uTop, smoothstep(-0.05, 0.5, d.y));
   // sun disc + glow
   float sd = max(dot(d, normalize(uSunDir)), 0.0);
   float disc = smoothstep(1.0 - uSunSize, 1.0 - uSunSize*0.25, sd);
@@ -235,6 +236,11 @@ function DeskScene() {
         o.castShadow = true
         o.receiveShadow = true
       }
+      // Warm, brighten the wall — largest interior surface. Reference walls are a warm
+      // sunlit greige, not flat cool grey. (Material colour only; lighting does the rest.)
+      if (/wall/i.test(n)) {
+        mats.forEach((m) => { if (m && m.color) m.color.setRGB(0.60, 0.52, 0.42) })
+      }
       // Tame the practical lamp so it stops dominating the sunny-morning frame.
       // Bulb still blooms (reads as "on") but smaller; shade no longer clips to white.
       mats.forEach((m) => {
@@ -363,7 +369,7 @@ export default function App() {
           {/* Restrained sunny-morning grade: gentle contrast + a touch of warmth/saturation. */}
           <BrightnessContrast brightness={0.015} contrast={0.075} />
           <HueSaturation saturation={0.07} />
-          <Vignette eskil={false} offset={0.32} darkness={0.5} />
+          <Vignette eskil={false} offset={0.42} darkness={0.34} />
         </EffectComposer>
       </Canvas>
 
