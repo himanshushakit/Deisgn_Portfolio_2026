@@ -1,7 +1,7 @@
 import React, { useLayoutEffect, useRef, useMemo } from 'react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { useGLTF, ScrollControls, useScroll, Billboard } from '@react-three/drei'
-import { EffectComposer, Bloom } from '@react-three/postprocessing'
+import { EffectComposer, Bloom, Vignette, BrightnessContrast, HueSaturation } from '@react-three/postprocessing'
 import * as THREE from 'three'
 
 // --- Animated coffee steam (procedural rising-wisps shader on a billboard) ---
@@ -76,9 +76,10 @@ const WEATHER = {
       cloudSpeed: 0.008,
     },
     // key light = the sun (matches sky sunDir). warm morning.
-    sun:     { color: '#fff2d6', intensity: 2.6 },
-    ambient: { intensity: 0.45 },
-    hemi:    { sky: 0xbcd3ff, ground: 0x6b5a44, intensity: 0.7 },
+    // Strong directional key + reduced flat fill => raking morning light, real contrast.
+    sun:     { color: '#ffe8bf', intensity: 3.6 },
+    ambient: { intensity: 0.44 },
+    hemi:    { sky: 0xbcd3ff, ground: 0x6b5a44, intensity: 0.62 },
     fog:     null,                    // clear morning (rainy/foggy presets will set this later)
   },
 }
@@ -234,6 +235,13 @@ function DeskScene() {
         o.castShadow = true
         o.receiveShadow = true
       }
+      // Tame the practical lamp so it stops dominating the sunny-morning frame.
+      // Bulb still blooms (reads as "on") but smaller; shade no longer clips to white.
+      mats.forEach((m) => {
+        if (!m) return
+        if (/lampbulb/i.test(n)) m.emissiveIntensity = 5.0
+        else if (/lampshade/i.test(n)) m.emissiveIntensity = Math.min(m.emissiveIntensity ?? 1, 0.55)
+      })
     })
   }, [scene])
 
@@ -309,6 +317,9 @@ function Lights() {
       />
       {/* faint cool bounce/fill from the room side */}
       <directionalLight position={[-2.0, 1.5, 1.0]} intensity={0.25} color="#cfe0ff" />
+      {/* WARM WINDOW BOUNCE — soft daylight spilling in from the window (-Z), lifts the
+          interior warmly without erasing the sun's directional shadows. */}
+      <pointLight position={[0, 1.35, -1.15]} color="#ffe4b8" intensity={0.85} distance={5} decay={1.4} />
     </>
   )
 }
@@ -319,7 +330,12 @@ export default function App() {
       <Canvas
         shadows
         dpr={[1, 2]}
-        gl={{ antialias: true, logarithmicDepthBuffer: true }}
+        gl={{
+          antialias: true,
+          logarithmicDepthBuffer: true,
+          toneMapping: THREE.ACESFilmicToneMapping,
+          toneMappingExposure: 1.4,
+        }}
         camera={{ position: [0, 1.2, -0.25], fov: 55, near: 0.05, far: 40 }}
       >
         <color attach="background" args={['#cddcf2']} />
@@ -327,8 +343,8 @@ export default function App() {
         <Lights />
         {/* Warm lamp glow. The shade's emissive material + bloom is the visible "lamp is on" source;
             these two point lights add a SUBTLE warm pool low in/under the shade. */}
-        <pointLight position={[0.48, 1.05, -1.24]} color="#ffca78" intensity={0.32} distance={0.85} decay={2} />
-        <pointLight position={[0.48, 0.96, -1.22]} color="#ffb860" intensity={0.14} distance={0.5} decay={2} />
+        <pointLight position={[0.48, 1.05, -1.24]} color="#ffca78" intensity={0.16} distance={0.7} decay={2} />
+        <pointLight position={[0.48, 0.96, -1.22]} color="#ffb860" intensity={0.07} distance={0.45} decay={2} />
         {/* Coffee steam rising from the mug (glTF: Blender coffee (-0.52,1.08,0.932) -> (x,z,-y)) */}
         <Steam position={[-0.61, 1.06, -1.08]} />
         <ScrollControls pages={4} damping={0.25}>
@@ -338,12 +354,16 @@ export default function App() {
             High threshold => only the HDR-bright bulb (emission ~14) blooms, not the daylight window. */}
         <EffectComposer disableNormalPass>
           <Bloom
-            intensity={0.35}
-            luminanceThreshold={1.05}
-            luminanceSmoothing={0.35}
+            intensity={0.32}
+            luminanceThreshold={1.1}
+            luminanceSmoothing={0.4}
             mipmapBlur
             radius={0.6}
           />
+          {/* Restrained sunny-morning grade: gentle contrast + a touch of warmth/saturation. */}
+          <BrightnessContrast brightness={0.015} contrast={0.075} />
+          <HueSaturation saturation={0.07} />
+          <Vignette eskil={false} offset={0.32} darkness={0.5} />
         </EffectComposer>
       </Canvas>
 
