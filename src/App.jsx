@@ -1,6 +1,6 @@
-import React, { useLayoutEffect, useRef, useMemo } from 'react'
+import React, { useLayoutEffect, useRef, useMemo, Suspense } from 'react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
-import { useGLTF, ScrollControls, useScroll, Billboard } from '@react-three/drei'
+import { useGLTF, ScrollControls, useScroll, Billboard, useTexture } from '@react-three/drei'
 import { EffectComposer, Bloom, Vignette, BrightnessContrast, HueSaturation } from '@react-three/postprocessing'
 import * as THREE from 'three'
 
@@ -290,6 +290,41 @@ function DeskScene() {
   return <primitive object={scene} />
 }
 
+// Wall storytelling art — posters, sticky notes, framed photos on the flat back wall
+// (three-Z ≈ -1.49, just in front of the wall at -1.5). Purely additive; gives the
+// cozy-designer personality of the reference. Positions tuned to the locked camera.
+function WallArt() {
+  const tex = useTexture({
+    poster: '/art/poster_longway.png',
+    keep: '/art/note_keep.png',
+    curious: '/art/note_curious.png',
+    lake: '/art/photo_lake.png',
+    dusk: '/art/photo_dusk.png',
+  })
+  useMemo(() => {
+    Object.values(tex).forEach((t) => { t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4 })
+  }, [tex])
+  const Z = -1.43   // just in front of the wall's room-facing surface (~-1.45)
+  const Piece = ({ map, x, y, w, h, rot = 0, emissive = 0.22 }) => (
+    <mesh position={[x, y, Z]} rotation={[0, 0, rot]}>
+      <planeGeometry args={[w, h]} />
+      <meshStandardMaterial
+        map={map} emissive="#ffffff" emissiveMap={map} emissiveIntensity={emissive}
+        roughness={0.93} metalness={0} transparent alphaTest={0.5}
+      />
+    </mesh>
+  )
+  return (
+    <group>
+      {/* right strip (X 0.55..1.2) */}
+      <Piece map={tex.poster} x={0.87} y={1.46} w={0.46} h={0.657} />
+      {/* left strip (X -1.2..-0.55) */}
+      <Piece map={tex.keep} x={-0.88} y={1.58} w={0.28} h={0.28} rot={0.05} />
+      <Piece map={tex.lake} x={-0.9} y={1.19} w={0.32} h={0.24} rot={0.02} />
+    </group>
+  )
+}
+
 function Lights() {
   const w = wx()
   // Key light = the sun. Its direction matches the sky's sunDir so shading agrees
@@ -351,6 +386,7 @@ export default function App() {
         <fog attach="fog" args={['#c4d6ea', 4.7, 16]} />
         <Sky />
         <Lights />
+        <Suspense fallback={null}><WallArt /></Suspense>
         {/* Warm lamp glow. The shade's emissive material + bloom is the visible "lamp is on" source;
             these two point lights add a SUBTLE warm pool low in/under the shade. */}
         <pointLight position={[0.48, 1.05, -1.24]} color="#ffca78" intensity={0.16} distance={0.7} decay={2} />
