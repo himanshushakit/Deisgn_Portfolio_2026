@@ -345,6 +345,10 @@ export default function App() {
         camera={{ position: [0, 1.2, -0.25], fov: 55, near: 0.05, far: 40 }}
       >
         <color attach="background" args={['#cddcf2']} />
+        {/* Atmospheric perspective: distant exterior (house/forest/hills) hazes toward
+            sky colour. near=4.7 keeps the whole interior + tree/fence crisp; only the
+            far layers soften. Custom Sky shader ignores fog, so the sky stays vivid. */}
+        <fog attach="fog" args={['#c4d6ea', 4.7, 16]} />
         <Sky />
         <Lights />
         {/* Warm lamp glow. The shade's emissive material + bloom is the visible "lamp is on" source;
