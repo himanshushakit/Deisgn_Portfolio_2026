@@ -7,7 +7,7 @@
 // ============================================================================
 
 // Bump the ?v= whenever scene.glb is re-exported so the browser can't serve a stale cache.
-export const GLB_URL = '/scene.glb?v=32'
+export const GLB_URL = '/scene.glb?v=33'
 
 // Renderer.
 export const BACKGROUND_COLOR = '#cddcf2'

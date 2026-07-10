@@ -7,9 +7,9 @@ import * as THREE from 'three'
 // ── Extracted modules (architecture recovery): config = tunable art-direction,
 // materials = runtime procedural material registry. See CLAUDE.md / docs/.
 import { wx } from './config/weather.js'
-import { WEBSITE, SCREEN, STANDEE, HINGE_OPEN, PHASE, smootherstep } from './config/camera.js'
-import { HIGH_Q } from './config/quality.js'
-import { GLB_URL, LAMP_SHADE_GLOW } from './config/scene.js'
+import { WEBSITE, SCREEN, STANDEE, HINGE_OPEN, PHASE, SCROLL_PAGES, smootherstep } from './config/camera.js'
+import { HIGH_Q, qp } from './config/quality.js'
+import { GLB_URL, LAMP_SHADE_GLOW, BACKGROUND_COLOR, TONE_MAPPING_EXPOSURE, RENDER_FPS, FOG, LAMP_LIGHT, STEAM_POSITION, POST } from './config/scene.js'
 import { applyStuccoWall, applyWhitewashWood, applyFenceWood, applyPleatedShade, applyLampWood, applyGlassDust, applyOutsideVibrance } from './materials/proceduralMaterials.js'
 
 // --- Animated coffee steam (procedural rising-wisps shader on a billboard) ---
@@ -513,7 +513,7 @@ function Lights() {
         color={w.sun.color}
         intensity={w.sun.intensity}
         castShadow
-        shadow-mapSize={HIGH_Q ? [2048, 2048] : [1024, 1024]}
+        shadow-mapSize={qp().shadowMapSize}
         shadow-bias={-0.0004}
         shadow-normalBias={0.02}
         shadow-radius={6}
@@ -582,6 +582,33 @@ function FrameLimiter({ fps = 30 }) {
   return null
 }
 
+// LIGHT 3 of 3 — the TABLE LAMP point light. Resolves its position from the Blender anchor
+// LIGHT_ANCHOR_LAMP (parented to the lamp in desk_master.blend), so moving the lamp in Blender
+// moves the light with ZERO code change (falls back to LAMP_LIGHT.position if the anchor is
+// missing). Stays on the default layer 0 so it lights interior meshes only (see Lights). The
+// warm shade/bulb emissive + bloom give the visible glow; this light does the actual spill.
+function LampLight({ on }) {
+  const { scene } = useGLTF(GLB_URL)
+  const pos = useMemo(() => {
+    const a = scene.getObjectByName(LAMP_LIGHT.anchor)
+    if (a) {
+      a.updateWorldMatrix(true, false)
+      return a.getWorldPosition(new THREE.Vector3()).toArray()
+    }
+    if (typeof console !== 'undefined') console.warn(`[scene] anchor '${LAMP_LIGHT.anchor}' not found in GLB — using fallback lamp light position`)
+    return LAMP_LIGHT.position
+  }, [scene])
+  return (
+    <pointLight
+      position={pos}
+      color={LAMP_LIGHT.color}
+      intensity={on ? LAMP_LIGHT.intensity : 0}
+      distance={LAMP_LIGHT.distance}
+      decay={LAMP_LIGHT.decay}
+    />
+  )
+}
+
 export default function App() {
   const [lampOn, setLampOn] = useState(true)
   return (
@@ -589,51 +616,42 @@ export default function App() {
       <Canvas
         shadows
         frameloop="never"
-        dpr={HIGH_Q ? [1, 2] : [1, 1.25]}
+        dpr={qp().dpr}
         gl={{
           antialias: true,
           logarithmicDepthBuffer: true,
           toneMapping: THREE.ACESFilmicToneMapping,
-          toneMappingExposure: 1.4,
+          toneMappingExposure: TONE_MAPPING_EXPOSURE,
         }}
-        camera={{ position: [0, 1.2, -0.25], fov: 55, near: 0.05, far: 40 }}
+        camera={{ position: WEBSITE.pos.toArray(), fov: WEBSITE.fov, near: 0.05, far: 40 }}
       >
-        <color attach="background" args={['#cddcf2']} />
-        {/* Atmospheric perspective: distant exterior (house/forest/hills) hazes toward
-            sky colour. near=4.7 keeps the whole interior + tree/fence crisp; only the
-            far layers soften. Custom Sky shader ignores fog, so the sky stays vivid. */}
-        <fog attach="fog" args={['#c4d6ea', 7.5, 26]} />
-        <FrameLimiter fps={30} />
+        <color attach="background" args={[BACKGROUND_COLOR]} />
+        {/* Atmospheric perspective: distant exterior hazes toward sky colour; near keeps the
+            whole interior + tree/fence crisp. Custom Sky shader ignores fog, so sky stays vivid. */}
+        <fog attach="fog" args={[FOG.color, FOG.near, FOG.far]} />
+        <FrameLimiter fps={RENDER_FPS} />
         <Sky />
         <Lights />
         <Suspense fallback={null}><WallArt /></Suspense>
-        {/* LIGHT 3 of 3 — the TABLE LAMP. A single warm point light in the shade; the shade/bulb
-            emissive + bloom give the visible "lamp is on" glow. Cut to 0 when the lamp is tapped off.
-            Stays on the default layer 0, so it lights all INTERIOR meshes naturally (wall, camera,
-            laptop, posters…). Exterior + glass are on layers 1/2, so the lamp never reaches the
-            outdoor diorama through the window (no stray fence hot-spot). */}
-        <pointLight
-          position={[0.70, 1.02, -1.17]} color="#ffbf6e" intensity={lampOn ? 0.9 : 0} distance={2.2} decay={1.6}
-        />
-        {/* Coffee steam rising from the mug (glTF: Blender coffee (-0.52,1.08,0.932) -> (x,z,-y)) */}
-        <Steam position={[-0.61, 1.06, -1.08]} />
-        <ScrollControls pages={4} damping={0.25}>
+        <LampLight on={lampOn} />
+        {/* Coffee steam rising from the mug. */}
+        <Steam position={STEAM_POSITION} />
+        <ScrollControls pages={SCROLL_PAGES} damping={0.25}>
           <DeskScene lampOn={lampOn} setLampOn={setLampOn} />
         </ScrollControls>
         {/* Soft bloom so the lit shade + bulb glow warmly. Threshold kept just above daylight
-            luminance so only the glowing lamp (shade emissive 1.6 + bulb) blooms, not the window. */}
+            luminance so only the glowing lamp blooms, not the window. Grade values in config/scene.js POST. */}
         <EffectComposer disableNormalPass>
           <Bloom
-            intensity={0.55}
-            luminanceThreshold={1.05}
-            luminanceSmoothing={0.5}
+            intensity={POST.bloom.intensity}
+            luminanceThreshold={POST.bloom.luminanceThreshold}
+            luminanceSmoothing={POST.bloom.luminanceSmoothing}
             mipmapBlur
-            radius={0.8}
+            radius={POST.bloom.radius}
           />
-          {/* Restrained sunny-morning grade: gentle contrast + a touch of warmth/saturation. */}
-          <BrightnessContrast brightness={0.015} contrast={0.075} />
-          <HueSaturation saturation={0.07} />
-          <Vignette eskil={false} offset={0.42} darkness={0.34} />
+          <BrightnessContrast brightness={POST.brightnessContrast.brightness} contrast={POST.brightnessContrast.contrast} />
+          <HueSaturation saturation={POST.hueSaturation.saturation} />
+          <Vignette eskil={false} offset={POST.vignette.offset} darkness={POST.vignette.darkness} />
         </EffectComposer>
       </Canvas>
 
