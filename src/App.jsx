@@ -11,6 +11,7 @@ import { WEBSITE, SCREEN, STANDEE, HINGE_OPEN, PHASE, SCROLL_PAGES, smootherstep
 import { HIGH_Q, qp } from './config/quality.js'
 import { GLB_URL, LAMP_SHADE_GLOW, BACKGROUND_COLOR, TONE_MAPPING_EXPOSURE, RENDER_FPS, FOG, LAMP_LIGHT, STEAM_POSITION, POST } from './config/scene.js'
 import { applyStuccoWall, applyWhitewashWood, applyFenceWood, applyPleatedShade, applyLampWood, applyGlassDust, applyOutsideVibrance } from './materials/proceduralMaterials.js'
+import { validateScene } from './utils/sceneValidation.js'
 
 // --- Animated coffee steam (procedural rising-wisps shader on a billboard) ---
 const STEAM_VERT = `
@@ -312,6 +313,7 @@ function DeskScene({ lampOn, setLampOn }) {
         }
       })
     })
+    validateScene(scene) // dev-only: warn on missing anchors/objects/materials (GLB drift)
   }, [scene])
 
   // Drive the lamp bulb/shade glow from the on/off state. When off, the emissive drops
