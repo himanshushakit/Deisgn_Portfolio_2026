@@ -6,6 +6,41 @@ body {
   overflow: hidden;
 }
 
+/* ── Custom 3D blurred-glass cursor ─────────────────────────────────────────
+   Native cursor hidden; replaced by a floating glass orb that trails the pointer,
+   blurs the scene behind it (lens/3D feel) and reacts to press + interactive hover. */
+html, body, * { cursor: none !important; }
+.cursor3d {
+  position: fixed; top: 0; left: 0;
+  width: 26px; height: 26px;
+  pointer-events: none;
+  z-index: 9999;
+  opacity: 0;
+  transition: opacity 0.25s ease;
+  will-change: transform;
+}
+.cursor3d-orb {
+  width: 100%; height: 100%;
+  border-radius: 50%;
+  /* subtle soft glass dot. Light blur so it stays cheap to composite each frame (keeps
+     the motion smooth); gentle highlight + faint shadow only. */
+  background: radial-gradient(circle at 40% 36%,
+    rgba(255,255,255,0.18), rgba(255,255,255,0.03) 58%, transparent 76%);
+  -webkit-backdrop-filter: blur(2px);
+  backdrop-filter: blur(2px);
+  border: 1px solid rgba(255,255,255,0.10);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+  transition: transform 0.18s cubic-bezier(.2,.8,.2,1), background 0.2s ease, border-color 0.2s ease;
+  will-change: transform;
+}
+.cursor3d.down .cursor3d-orb { transform: scale(0.88); }     /* gentle press feedback */
+html.cursor-hot .cursor3d-orb {                              /* over an interactive object */
+  transform: scale(1.28);
+  background: radial-gradient(circle at 40% 36%,
+    rgba(255,236,196,0.22), rgba(255,214,150,0.05) 55%, transparent 76%);
+  border-color: rgba(255,224,170,0.24);
+}
+
 /* Scroll hint overlay (fades out as you scroll) */
 .hint {
   position: fixed;
