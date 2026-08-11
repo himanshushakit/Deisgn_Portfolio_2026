@@ -36,15 +36,17 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      # Sets the correct base path for a project Pages site. `${{ github.event.repository.name }}`
-      # means this is derived from the repo itself rather than hardcoded — renaming the repo (the
-      # name currently has a typo) can't silently break asset paths.
-      # NOTE: if a custom domain is ever configured, change this to VITE_BASE=/ since a custom
-      # domain serves from the root.
+      # Base path for the deployed site. The site is served from the CUSTOM DOMAIN
+      # himanshushakit.com, which serves from the ROOT — so the base is '/' and asset URLs come out
+      # as /assets/…, /scene.glb, /manifest.webmanifest.
+      # This was previously `/${{ github.event.repository.name }}/`, which is correct only for a
+      # github.io PROJECT site (https://<user>.github.io/<repo>/). Once the custom domain was added
+      # that prefix became wrong and every asset 404'd at /Deisgn_Portfolio_2026/….
+      # Revert to `/${{ github.event.repository.name }}/` if the custom domain is ever removed.
       - name: Build
         run: npm run build
         env:
-          VITE_BASE: /${{ github.event.repository.name }}/
+          VITE_BASE: /
 
       # Fail loudly here rather than shipping a site whose 3D scene silently 404s. The GLB is the
       # one asset the whole experience depends on, and it is the one most likely to be lost to a
@@ -59,8 +61,8 @@ jobs:
           echo "dist size: $(du -sh dist | cut -f1)"
 
       # NOTE: actions/configure-pages is deliberately NOT used. Its job is to hand a framework the
-      # site's base path, which is unnecessary here because VITE_BASE is derived from the repo name
-      # above. It was tried with `enablement: true` (to switch Pages on automatically) and failed the
+      # site's base path, which is unnecessary here because VITE_BASE is set explicitly above.
+      # It was tried with `enablement: true` (to switch Pages on automatically) and failed the
       # run: enablement needs repository-ADMIN rights and GITHUB_TOKEN does not have them. Pages
       # therefore has to be enabled once by hand — Settings > Pages > Build and deployment >
       # Source: "GitHub Actions" — after which this workflow needs no further setup.
