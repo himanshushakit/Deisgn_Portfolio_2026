@@ -7,20 +7,30 @@ laptop, outside_environment, lamp, camera_prop, mug, standee, desk_mat) under `L
 ## Steps
 1. **Edit the right file.** Geometry/material of an asset → its own `.blend` (e.g. `lamp.blend`).
    Composition / static placement / anchors → `desk_master.blend`. Save the file(s).
-2. **Export** from `desk_master.blend` (via Blender MCP `execute_blender_code` or Blender UI):
+2. **Export** from `desk_master.blend` (via Blender MCP `execute_blender_code` or Blender UI).
+   IMPORTANT: the runtime loads with a `/draco/` decoder, so you MUST enable Draco — omitting it
+   bloats the GLB ~8× (≈10 MB → ≈78 MB). And when running headless via MCP, wrap the op in a
+   VIEW_3D `temp_override` or it throws `AttributeError: 'Context' object has no attribute 'active_object'`.
    ```python
    import bpy
    bpy.ops.wm.save_mainfile()
-   bpy.ops.export_scene.gltf(
-       filepath='/Users/bachatt/Desktop/Portfolio 2026/web/public/scene.glb',
-       export_format='GLB',
-       use_visible=True,          # excludes the excluded REFERENCES collection + hidden guides
-       export_apply=True,         # apply modifiers (bakes them into the mesh)
-       export_cameras=True,       # CAM_* waypoints
-       export_lights=True,        # (stripped at runtime, but harmless)
-       export_extras=True,
-       export_image_format='WEBP',# keep textures small (load time)
-       export_yup=True)
+   win = bpy.context.window_manager.windows[0]
+   area = next((a for a in win.screen.areas if a.type=='VIEW_3D'), None) or win.screen.areas[0]
+   if area.type != 'VIEW_3D': area.type = 'VIEW_3D'
+   region = next((r for r in area.regions if r.type=='WINDOW'), None)
+   with bpy.context.temp_override(window=win, area=area, region=region):
+       bpy.ops.export_scene.gltf(
+           filepath='/Users/bachatt/Desktop/Portfolio 2026/web/public/scene.glb',
+           export_format='GLB',
+           use_visible=True,          # excludes the excluded REFERENCES collection + hidden guides
+           export_apply=True,         # apply modifiers (bakes them into the mesh)
+           export_cameras=True,       # CAM_* waypoints
+           export_lights=True,        # (stripped at runtime, but harmless)
+           export_extras=True,
+           export_image_format='WEBP',# keep textures small (load time)
+           export_yup=True,
+           export_draco_mesh_compression_enable=True,  # REQUIRED (runtime uses /draco/ decoder)
+           export_draco_mesh_compression_level=6)
    ```
 3. **Bump the cache-bust:** increment `?v=` on `GLB_URL` in `src/config/scene.js`.
 4. **Verify** (runtime matches GLB content by NAME, so drift breaks silently):

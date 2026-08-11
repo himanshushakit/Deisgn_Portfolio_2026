@@ -34,11 +34,26 @@ export const STANDEE = {
 // Laptop opens by rotating Laptop_Hinge about local X (same axis/sign as Blender).
 export const HINGE_OPEN = THREE.MathUtils.degToRad(-100)
 
-// Scroll split between the two phases.
-export const PHASE = 0.5
+// Scroll timeline (three segments):
+//   [0 .. LID_OPEN_END]               Phase A — lid opens, camera WEBSITE -> SCREEN
+//   [LID_OPEN_END .. PANEL_HOLD_END]  DWELL   — camera holds at SCREEN; project thumbnails cross-fade
+//   [PANEL_HOLD_END .. 1]             Phase B — camera SCREEN -> STANDEE
+export const LID_OPEN_END = 0.24
+export const PANEL_HOLD_END = 0.76
 
-// Scroll pages for <ScrollControls>.
-export const SCROLL_PAGES = 4
+// Scroll pages for <ScrollControls>. Bumped 7 -> 8 and the dwell widened so each project thumbnail
+// gets more physical scroll distance (slower, less-abrupt thumbnail-to-thumbnail transitions) while
+// the lid-open + standee segments keep roughly their previous pace.
+// Also sizes the mobile path's document-scroll spacer (`--scroll-pages` in styles.css), so both
+// paths travel the same timeline length from one constant.
+export const SCROLL_PAGES = 8
+
+// Smoothing time (seconds) for the MOBILE scroll source only — there the browser's own document
+// scroll drives the timeline (see utils/viewport.js / MobileScrollDriver in App.jsx). Kept far
+// shorter than the desktop <ScrollControls damping={0.65}> on purpose: that damping exists to give
+// a mouse wheel's discrete clicks some momentum, whereas touch already arrives with native
+// inertia — layering 0.65s on top of it reads as the scene lagging behind the finger.
+export const MOBILE_SCROLL_SMOOTH = 0.08
 
 export const smootherstep = (x) => {
   x = THREE.MathUtils.clamp(x, 0, 1)

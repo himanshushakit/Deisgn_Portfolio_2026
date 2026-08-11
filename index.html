@@ -2,8 +2,23 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- viewport-fit=cover so the scene fills past the notch/home-indicator in landscape (the UI
+         insets itself with env(safe-area-inset-*), see styles.css). Zoom is disabled because
+         pinch-zooming a WebGL canvas just breaks the fixed camera framing. -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <!-- Landscape lock for INSTALLED (add-to-home-screen) use — see manifest "orientation".
+         Browsing in iOS Safari can't be locked by any API; RotateGate in App.jsx covers that. -->
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="theme-color" content="#0e1116" />
     <title>Portfolio 2026 — Pipeline Prototype</title>
+    <!-- Alan Sans SemiBold (600, weather selector / most UI text) + Light (300, boot loader
+         subtitle — see .loader-subtitle) — swap-on-load so neither blocks first paint. -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Alan+Sans:wght@300;600&display=swap" rel="stylesheet" />
   </head>
   <body>
     <div id="root"></div>

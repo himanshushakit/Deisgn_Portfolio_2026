@@ -6,79 +6,419 @@ body {
   overflow: hidden;
 }
 
-/* ── Custom 3D blurred-glass cursor ─────────────────────────────────────────
-   Native cursor hidden; replaced by a floating glass orb that trails the pointer,
-   blurs the scene behind it (lens/3D feel) and reacts to press + interactive hover. */
-html, body, * { cursor: none !important; }
-.cursor3d {
-  position: fixed; top: 0; left: 0;
-  width: 26px; height: 26px;
+/* Default OS cursor (the custom cursor was removed — it caused lag/jank).
+   Standard hand cursor when hovering the interactive lamp. */
+html.cursor-hot, html.cursor-hot * { cursor: pointer; }
+
+/* ============================================================================
+   MOBILE VIEWPORT — on phones the DOCUMENT is the scroller (desktop untouched)
+   ----------------------------------------------------------------------------
+   Why this block exists: a mobile browser only collapses its toolbars (Safari's top bar,
+   Chrome's top + bottom bars) in response to the MAIN FRAME scrolling. The desktop build gives
+   it none — drei's ScrollControls scrolls a private container inside the canvas and `body` is
+   `overflow: hidden` — so the chrome stayed pinned on screen permanently, eating a big slice of
+   an already short landscape viewport. Here `.mobile-scroll-spacer` gives `body` genuine scroll
+   height and the canvas is lifted out of flow on top of it (inline style, see MOBILE_CANVAS_STYLE
+   in utils/viewport.js), so the browser behaves as it does on any normal site.
+
+   Everything is scoped to html.is-mobile-viewport — a class set from JS (utils/viewport.js), NOT
+   a media query. The scroll architecture in App.jsx branches on that same flag, and a media query
+   could disagree with it (e.g. on a touchscreen laptop, which stays on the desktop path) and
+   half-apply these rules.
+   ============================================================================ */
+html.is-mobile-viewport,
+html.is-mobile-viewport body {
+  height: auto;
+  min-height: 100%;
+  overflow: visible;
+  /* No rubber-band / pull-to-refresh: both fight a scroll-driven timeline, and the bounce flashes
+     the page background at either end of it. */
+  overscroll-behavior-y: none;
+}
+html.is-mobile-viewport #root { height: auto; }
+/* While the boot loader is up, freeze the scroll — a swipe behind the opaque cover would otherwise
+   run the timeline forward and reveal the scene mid-animation (class toggled by Loader in App.jsx,
+   which is also why this is scoped to the mobile path: desktop's scroller isn't the document). */
+html.is-mobile-viewport.is-booting,
+html.is-mobile-viewport.is-booting body { overflow: hidden; }
+.mobile-scroll-spacer {
+  /* --scroll-pages comes inline from SCROLL_PAGES (config/camera.js) so that one constant stays the
+     source of truth for the timeline length on both paths.
+     `vh`, deliberately NOT `dvh`: vh is the LARGE (toolbar-hidden) viewport and so never changes
+     while the chrome collapses. scrollHeight therefore stays put, and the scroll -> offset mapping
+     can't shift under the user's finger at the exact moment the toolbars slide away. */
+  height: calc(var(--scroll-pages, 8) * 100vh);
   pointer-events: none;
-  z-index: 9999;
-  opacity: 0;
-  transition: opacity 0.25s ease;
-  will-change: transform;
-}
-.cursor3d-orb {
-  width: 100%; height: 100%;
-  border-radius: 50%;
-  /* subtle soft glass dot. Light blur so it stays cheap to composite each frame (keeps
-     the motion smooth); gentle highlight + faint shadow only. */
-  background: radial-gradient(circle at 40% 36%,
-    rgba(255,255,255,0.18), rgba(255,255,255,0.03) 58%, transparent 76%);
-  -webkit-backdrop-filter: blur(2px);
-  backdrop-filter: blur(2px);
-  border: 1px solid rgba(255,255,255,0.10);
-  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
-  transition: transform 0.18s cubic-bezier(.2,.8,.2,1), background 0.2s ease, border-color 0.2s ease;
-  will-change: transform;
-}
-.cursor3d.down .cursor3d-orb { transform: scale(0.88); }     /* gentle press feedback */
-html.cursor-hot .cursor3d-orb {                              /* over an interactive object */
-  transform: scale(1.28);
-  background: radial-gradient(circle at 40% 36%,
-    rgba(255,236,196,0.22), rgba(255,214,150,0.05) 55%, transparent 76%);
-  border-color: rgba(255,224,170,0.24);
 }
 
-/* Scroll hint overlay (fades out as you scroll) */
+/* ============================================================================
+   BOOT LOADER — Figma "Loader - Desktop/Mobile - 0% / In Between / 100%"
+   (nodes 242:1030, 247:1146, 247:1153, 242:1097, 247:1160, 247:1167).
+   Full-viewport #121212 cover shown from first paint. The Canvas mounts and starts
+   rendering immediately underneath it as always (nothing is deferred) — this is purely a
+   visual cover so the user never sees the "black screen + UI, then a jump-cut" boot moment.
+   The progress bar tracks REAL asset-loading progress (see useBootLoad in App.jsx), so by
+   the time it reaches 100% the scene has already rendered several real frames behind this
+   opaque cover, warming up shader compilation — the eventual reveal is then instant, with
+   no first-frame stutter. z-index sits above EVERYTHING, including .rotate-gate (z-index 100
+   below), so a portrait phone never flashes the rotate prompt before the loader appears.
+   ============================================================================ */
+.loader-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 28px;
+  background: #121212;
+  color: #fff;
+  font-family: 'Alan Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  text-align: center;
+  /* Same ease-out cubic-bezier already used for .weather-select-highlight / .brand-badge-text,
+     kept consistent as the site's one motion curve. */
+  transition: opacity 0.7s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.loader-screen.is-hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+.loader-text {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+.loader-title {
+  font-weight: 600;
+  font-size: 32px;
+  margin: 0;
+}
+.loader-subtitle {
+  font-weight: 300;
+  font-size: 24px;
+  color: rgba(255, 255, 255, 0.85);
+  margin: 0;
+}
+.loader-track {
+  position: relative;
+  /* min() with a vw cap — Figma's 360px is fixed regardless of screen size, but that would
+     touch the edges on a narrow phone (e.g. 320-360px wide) with zero margin; safe on anything
+     reasonably sized, capped elsewhere. */
+  width: min(360px, 82vw);
+  height: 3px;
+  border: 0.5px solid #fff;
+  border-radius: 999px;
+}
+.loader-fill {
+  position: absolute;
+  top: 0; left: 0;
+  height: 100%;
+  border-radius: 999px;
+  background: #fff;
+  transition: width 0.25s ease-out;
+}
+/* Figma's mobile loader variant uses smaller text (22px/18px vs desktop 32px/24px) — keyed off
+   pointer+width (not orientation), so the size doesn't jump if the phone rotates mid-load. */
+@media (pointer: coarse) and (max-width: 900px) {
+  .loader-title { font-size: 22px; }
+  .loader-subtitle { font-size: 18px; }
+}
+
+/* Scroll hint overlay (fades out as you scroll) — Figma spec: glass pill (same convention as
+   the weather selector / brand badge), Alan Sans SemiBold 10px @ 60% white, sentence case (not
+   uppercase). Arrow icon is the "Scroll Down Arrows" Lottie (see .hint-arrows) instead of the
+   old hand-rolled CSS chevron bounce. */
 .hint {
   position: fixed;
   left: 50%;
   transform: translateX(-50%);
-  bottom: 18px;
-  color: rgba(255, 255, 255, 0.85);
-  letter-spacing: 0.14em;
-  font-size: 9px;
-  text-transform: uppercase;
+  bottom: 20px;
+  color: rgba(255, 255, 255, 0.6);
+  font-family: 'Alan Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-weight: 600;
+  font-size: 10px;
   pointer-events: none;
   z-index: 10;
   display: flex;
   flex-direction: row;
   align-items: center;
-  gap: 7px;
+  gap: 6px;
   line-height: 1;
+  padding: 2px 12px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(20px) saturate(1.4);
+  -webkit-backdrop-filter: blur(20px) saturate(1.4);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.18);
   transition: opacity 0.4s ease;
 }
-.hint .chevron {
-  width: 7px; height: 7px;
-  border-right: 1.5px solid rgba(255,255,255,0.7);
-  border-bottom: 1.5px solid rgba(255,255,255,0.7);
-  transform: translateY(-1px) rotate(45deg);
-  animation: bob 1.6s ease-in-out infinite;
+/* Crop the Lottie's padded 100x100 canvas down to just the chevrons (content measured via
+   getBBox() to sit centered around canvas unit 50,49, spanning ~20-23 units) — 2x was chosen
+   over a tighter crop because zooming further also thickens the stroke width proportionally,
+   which read as a heavy/oversized icon rather than the thin, delicate chevron in the Figma ref. */
+.hint-arrows {
+  position: relative;
+  width: 24px; height: 24px;
+  overflow: hidden;
 }
-@keyframes bob {
-  0%, 100% { transform: translateY(-1px) rotate(45deg) translate(0,0); opacity: 0.4; }
-  50%       { transform: translateY(-1px) rotate(45deg) translate(2px,2px); opacity: 1; }
+.hint-arrows-inner {
+  position: absolute;
+  width: 48px; height: 48px;
+  left: -12px; top: -11.52px;
 }
 
-/* progress readout (dev aid) */
-.readout {
+/* Glass-pill weather selector (bottom-left — moved from bottom-right per updated Figma spec,
+   since the lamp's warm glow sits in that corner and washed the tabs out when lit). Earlier
+   top-center placement sat in the middle of the window view. Translucent white glass panel
+   (frosted via backdrop-filter), ONE fixed tab size (no hover/idle resizing), unselected
+   labels dimmed to 60% opacity. Selection is a single highlight pill that slides between tab
+   positions (.weather-select-highlight, driven from App.jsx) instead of each tab toggling its
+   own background, so switching tabs reads as one continuous slide. */
+.weather-select {
+  /* --tab-w is the single source of truth for tab width; the sliding highlight is sized and
+     positioned from it (and from --sel, the selected index set by WeatherSelector), so the
+     mobile breakpoints only need to override this one value. */
+  --tab-w: 64px;
   position: fixed;
-  top: 16px; left: 16px;
-  color: rgba(255,255,255,0.55);
-  font-size: 11px;
-  font-variant-numeric: tabular-nums;
-  z-index: 10;
+  left: 24px; bottom: 24px;
+  z-index: 11;
+  display: flex;
+  align-items: center;
+  gap: 0;
+  padding: 8px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(20px) saturate(1.4);
+  -webkit-backdrop-filter: blur(20px) saturate(1.4);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.18);
+  user-select: none;
+}
+.weather-select-highlight {
+  position: absolute;
+  top: 8px; left: 8px;
+  width: var(--tab-w);
+  transform: translateX(calc(var(--sel, 0) * var(--tab-w)));
+  height: calc(100% - 16px);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.2);
+  transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
   pointer-events: none;
+  z-index: 0;
+}
+.weather-select button {
+  position: relative;
+  z-index: 1;
+  background: transparent;
+  border: 0;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--tab-w);
+  padding: 8px 12px;
+  border-radius: 999px;
+  font-family: 'Alan Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-weight: 600;
+  font-size: 12px;
+  line-height: normal;
+  white-space: nowrap;
+  color: rgba(255, 255, 255, 0.6);
+  cursor: pointer;
+  transition: color 0.3s ease;
+}
+.weather-select button:hover:not(.active) { color: rgba(255, 255, 255, 0.85); }
+.weather-select button.active { color: #fff; }
+
+/* Personal-branding glass badge (bottom-right — Figma "Logo" spec). At rest it's just the
+   48x48 glass logo pill; the "©2026 …" credit line is collapsed to zero width/opacity and
+   reveals by growing out to the LEFT on hover (the logo stays anchored, never moves — the
+   row is right-aligned so growth only ever pushes leftward). */
+.brand-badge {
+  position: fixed;
+  right: 24px; bottom: 24px;
+  z-index: 11;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  user-select: none;
+}
+.brand-badge-text {
+  font-family: 'Alan Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-weight: 400;
+  font-size: 10px;
+  line-height: normal;
+  color: rgba(255, 255, 255, 0.6);
+  text-align: right;
+  white-space: nowrap;
+  overflow: hidden;
+  max-width: 0;
+  margin-right: 0;
+  opacity: 0;
+  transition: max-width 0.35s cubic-bezier(0.4, 0, 0.2, 1),
+    margin-right 0.35s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.25s ease;
+}
+.brand-badge-text.is-visible {
+  max-width: 200px;
+  margin-right: 12px;
+  opacity: 1;
+}
+.brand-badge-logo {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px; height: 48px;
+  padding: 8px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(20px) saturate(1.4);
+  -webkit-backdrop-filter: blur(20px) saturate(1.4);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.18);
+}
+.brand-badge-logo img { display: block; width: 30px; height: 24px; }
+/* The logo is a real <button> so the credit line can be TAPPED open on touch (no hover there) —
+   reset the UA button chrome and kill the blue tap flash. */
+.brand-badge-logo {
+  appearance: none;
+  -webkit-appearance: none;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* ============================================================================
+   MOBILE — landscape-locked (Figma frames 215:861 idle / 215:957 tapped, 852x393)
+   ----------------------------------------------------------------------------
+   The site is designed to be viewed in LANDSCAPE on phones. Genuine orientation
+   locking is only possible where the platform allows it:
+     - installed / add-to-home-screen: manifest.webmanifest "orientation": "landscape"
+     - Android Chrome: screen.orientation.lock('landscape') while fullscreen
+   iOS Safari exposes NO API to force landscape, so a portrait visitor gets the
+   .rotate-gate prompt below instead. That gate is the universal fallback and the
+   only thing that works everywhere.
+   ============================================================================ */
+.rotate-gate { display: none; }
+
+/* PORTRAIT on a phone -> cover everything and ask for landscape. */
+@media (orientation: portrait) and (pointer: coarse) and (max-width: 900px) {
+  .rotate-gate {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 22px;
+    padding: 32px;
+    text-align: center;
+    background: #121212; /* matches .loader-screen so the boot loader -> rotate prompt never flashes a colour jump */
+    font-family: 'Alan Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  }
+  /* Simple phone outline that tips from portrait to landscape, on a loop. */
+  .rotate-gate-phone {
+    width: 42px;
+    height: 72px;
+    flex-shrink: 0;
+    border: 2px solid rgba(255, 255, 255, 0.55);
+    border-radius: 9px;
+    animation: rotate-gate-tip 2.4s ease-in-out infinite;
+  }
+  .rotate-gate-title {
+    font-weight: 600;
+    font-size: 15px;
+    line-height: 1.3;
+    color: rgba(255, 255, 255, 0.9);
+  }
+  .rotate-gate-sub {
+    display: block;
+    margin-top: 7px;
+    font-weight: 400;
+    font-size: 11px;
+    line-height: 1.45;
+    color: rgba(255, 255, 255, 0.5);
+  }
+}
+@keyframes rotate-gate-tip {
+  0%, 30% { transform: rotate(0deg); }
+  60%, 100% { transform: rotate(-90deg); }
+}
+
+/* LANDSCAPE on a phone -> the mobile UI layout. max-height keeps this off tablets/desktop
+   (iPad landscape is 768px+ tall); pointer:coarse keeps it off a short desktop window. */
+@media (orientation: landscape) and (pointer: coarse) and (max-height: 500px) {
+  /* One shared anchor for the bottom row. Figma spec: 20px from the left/right edges, with the
+     credit line ending ~6-8px off the bottom.
+     These are FLAT values and deliberately do NOT add env(safe-area-inset-left/right): iOS
+     reports 59px there in landscape (Dynamic Island + rounded corners), and adding 20px on top
+     pushed the controls ~79px in from the edges — measured at 80-98px on a real iPhone 15 Pro,
+     4x the design. The inset isn't needed here because this row sits at the BOTTOM of the screen
+     while the Island occupies the middle of the side edge, and at 20px/26px the pills stay well
+     inside the corner radius (~55px: a point 20px in and 26px up is comfortably within the
+     corner arc). The bottom keeps a safe-area floor so the credit line clears the home
+     indicator on devices that report one. */
+  :root {
+    --m-bottom: max(26px, env(safe-area-inset-bottom));
+    --m-left: 20px;
+    --m-right: 20px;
+    --m-logo: 40px;
+  }
+
+  /* Weather pill — bottom-left. Figma keeps the desktop tab metrics (64px / 12px). */
+  .weather-select {
+    left: var(--m-left);
+    bottom: var(--m-bottom);
+  }
+
+  /* Brand badge — bottom-right, logo slightly smaller than desktop's 48px. */
+  .brand-badge {
+    right: var(--m-right);
+    bottom: var(--m-bottom);
+  }
+  .brand-badge-logo { width: var(--m-logo); height: var(--m-logo); padding: 7px; }
+  .brand-badge-logo img { width: 25px; height: 20px; }
+  /* On mobile the credit line sits BELOW the row (Figma 215:957) rather than growing out to the
+     left. It's absolutely positioned so revealing it never nudges the pills — a layout shift
+     under the user's finger mid-tap would feel broken. */
+  .brand-badge-text {
+    position: absolute;
+    right: 0;
+    top: calc(100% + 5px);
+    max-width: none;
+    margin-right: 0;
+    max-height: 0;
+    transition: max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.25s ease;
+  }
+  .brand-badge-text.is-visible {
+    max-width: none;
+    margin-right: 0;
+    max-height: 20px;
+  }
+  /* Figma's mobile credit is a SINGLE 13px line ("...Shakit.All Rights Reserved.", 207px wide) —
+     drop the desktop two-line break so it doesn't get clipped by the collapse height. */
+  .brand-badge-text br { display: none; }
+
+  /* Scroll hint joins the bottom-right cluster, 12px to the left of the logo (Figma), instead of
+     sitting centred as on desktop. Vertically centred against the logo: the 28px pill's bottom
+     sits (logo height - pill height) / 2 above the row baseline. */
+  .hint {
+    left: auto;
+    transform: none;
+    right: calc(var(--m-right) + var(--m-logo) + 12px);
+    bottom: calc(var(--m-bottom) + ((var(--m-logo) - 28px) / 2));
+  }
+}
+
+/* Narrow phones (older/smaller devices in landscape): 5 x 64px tabs + the right-hand cluster
+   stops fitting under ~680px, so tighten the tabs. No JS constant to keep in sync — the sliding
+   highlight measures the real tab (see WeatherSelector), so it follows whatever these set. */
+@media (orientation: landscape) and (pointer: coarse) and (max-height: 500px) and (max-width: 680px) {
+  .weather-select { --tab-w: 52px; padding: 6px; }
+  .weather-select button { width: var(--tab-w); padding: 7px 8px; font-size: 11px; }
+  .weather-select-highlight { top: 6px; left: 6px; height: calc(100% - 12px); }
+  .hint { font-size: 9px; }
 }

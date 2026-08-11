@@ -26,6 +26,8 @@ Per-system ownership. When you change a system, change it at its source (see `CL
 | Camera scroll waypoints + hinge-open angle + timeline | `src/config/camera.js` (`WEBSITE`/`SCREEN`/`STANDEE`, `HINGE_OPEN`, `PHASE`) |
 | Device quality tiers (dpr, shadow map) | `src/config/quality.js` (`QUALITY_PRESETS`) |
 | Scroll interaction / camera animation | `DeskScene` `useFrame` in `App.jsx` |
+| Scroll SOURCE (desktop = drei ScrollControls, mobile = the document itself) | `src/utils/viewport.js` (`IS_MOBILE_VIEWPORT`) + `MobileScrollDriver` in `App.jsx`; timeline length `SCROLL_PAGES`, mobile smoothing `MOBILE_SCROLL_SMOOTH` (`config/camera.js`) |
+| Mobile browser-chrome handling (document scroll, fullscreen request, landscape lock) | `src/utils/viewport.js` + the `html.is-mobile-viewport` block in `styles.css` |
 | Laptop opening behavior | `DeskScene` (rotates `Laptop_Hinge`) |
 | Lamp on/off interaction | `DeskScene` click handler + `App` `lampOn` state |
 | Sky (gradient/sun/clouds) | `Sky` shader in `App.jsx` (driven by `weather.js`) |
