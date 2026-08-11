@@ -1,0 +1,17 @@
+node_modules
+dist
+.vite
+
+# macOS Finder metadata — never useful in a repo, and it reappears constantly
+.DS_Store
+
+# large binary backups (keep on disk, not in git)
+*.glb.bak
+*.glb.v*.bak
+scene_v*_backup.glb
+
+# Hi-res source originals for the project thumbnails (11840x8000 PNGs, ~29 MB).
+# Deliberately NOT versioned: they are authoring sources, Vite only ever copies public/,
+# and nothing in src/ imports them — the shipped 1600px versions live in public/projects/.
+# Kept on disk so the originals are still to hand for re-exports.
+_source-hires/
