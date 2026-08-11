@@ -8,6 +8,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
     <!-- Landscape lock for INSTALLED (add-to-home-screen) use — see manifest "orientation".
          Browsing in iOS Safari can't be locked by any API; RotateGate in App.jsx covers that. -->
+    <!-- Absolute paths here on purpose: Vite rewrites href/src in index.html with the configured
+         `base`, so these become /<repo>/… on a GitHub Pages project site. Without an explicit icon
+         link the browser silently requests /favicon.ico from the DOMAIN ROOT — which ignores the
+         base path entirely and 404s on Pages. -->
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <link rel="manifest" href="/manifest.webmanifest" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />

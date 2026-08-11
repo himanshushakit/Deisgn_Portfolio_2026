@@ -5,9 +5,10 @@
 // JSX. These are the current APPROVED sunny-morning values. Weather presets may later
 // override the post/fog/lamp blocks per-state (see config/weather.js schema).
 // ============================================================================
+import { asset } from '../utils/assets.js'
 
 // Bump the ?v= whenever scene.glb is re-exported so the browser can't serve a stale cache.
-export const GLB_URL = '/scene.glb?v=196'
+export const GLB_URL = asset('scene.glb?v=196')
 
 // Renderer.
 export const BACKGROUND_COLOR = '#cddcf2'
