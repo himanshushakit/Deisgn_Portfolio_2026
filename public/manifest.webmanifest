@@ -2,7 +2,11 @@
   "name": "Himanshu Shakit — Portfolio 2026",
   "short_name": "Himanshu Shakit",
   "description": "Scroll-driven cinematic 3D portfolio — a cozy desk facing a window.",
-  "start_url": "/",
+  "start_url": "./",
+  "scope": "./",
+  "icons": [
+    { "src": "./favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ],
   "display": "fullscreen",
   "orientation": "landscape",
   "background_color": "#0e1116",

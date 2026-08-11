@@ -23,6 +23,7 @@ const sampleBiased = (tex, uv) => (TEX_LOD_BIAS ? `texture2D(${tex}, ${uv}, uLod
 import { GLB_URL, LAMP_SHADE_GLOW, BACKGROUND_COLOR, TONE_MAPPING_EXPOSURE, RENDER_FPS, FOG, LAMP_LIGHT, STEAM_POSITION, POST, AO } from './config/scene.js'
 import { applyBrickWall, applyWhitewashWood, applyFenceWoodGrain, applyPleatedShade, applyLampWood, applyGlassDust, applyOutsideVibrance, applyLaptopAluminum, applyCamBody, applyCamBarrel, applyCamGlass, applyCamRing, applyCamButton, applyCamLeather, setOutsideWeather } from './materials/proceduralMaterials.js'
 import { validateScene } from './utils/sceneValidation.js'
+import { asset, DRACO_PATH } from './utils/assets.js'
 import { IS_MOBILE_VIEWPORT, MOBILE_CANVAS_STYLE, initImmersiveFullscreen, lockLandscape } from './utils/viewport.js'
 import brandLogo from './assets/brand-logo.svg'
 import Lottie from 'lottie-react'
@@ -100,7 +101,7 @@ const STEAM_OUTPUT_GLSL = `
 }
 `
 function Steam({ weather }) {
-  const { scene } = useGLTF(GLB_URL, '/draco/')
+  const { scene } = useGLTF(GLB_URL, DRACO_PATH)
   const shaderRef = useRef()
   // Auto-place at the actual coffee surface (GEO_MugCoffee's world bbox), not a hand-tuned
   // offset — a hardcoded position drifts out of sync whenever the mug moves in Blender
@@ -173,7 +174,7 @@ const CONTACT_OUTPUT_GLSL = `
 }
 `
 function LaptopContactShadow() {
-  const { scene } = useGLTF(GLB_URL, '/draco/')
+  const { scene } = useGLTF(GLB_URL, DRACO_PATH)
   const shaderRef = useRef()
   // Auto-place at the laptop's actual base (its bbox bottom = the mat surface) so the plane sits
   // JUST above the mat — no hand-tuned height. Sized 1.6× the footprint so the penumbra has room.
@@ -230,17 +231,17 @@ function LaptopContactShadow() {
 // contributes nothing, only the bright rain streaks add light, which is the actual (and only
 // broadly browser-compatible) way to make a black-background overlay video read as transparent.
 function VideoRain({ weather }) {
-  const { scene } = useGLTF(GLB_URL, '/draco/')
+  const { scene } = useGLTF(GLB_URL, DRACO_PATH)
   const materialRef = useRef()
   const video = useMemo(() => {
     const v = document.createElement('video')
     // <source> fallback (not v.src) so the browser itself picks a codec it can decode —
     // Safari skips the vp9 webm and falls through to the h264 mp4 automatically.
     const webm = document.createElement('source')
-    webm.src = '/rain.webm'
+    webm.src = asset('rain.webm')
     webm.type = 'video/webm; codecs="vp9"'
     const mp4 = document.createElement('source')
-    mp4.src = '/rain.mp4'
+    mp4.src = asset('rain.mp4')
     mp4.type = 'video/mp4; codecs="avc1.42E01E"'
     v.appendChild(webm)
     v.appendChild(mp4)
@@ -339,11 +340,11 @@ function VideoRain({ weather }) {
 // still driven by weather.js's `sky.sunDir`/`sun.color`/`sun.intensity` — so switching the
 // backdrop photo never touches how the room itself is actually lit.
 const SKY_BACKDROP_URLS = {
-  sunnyMorning: '/sky/backdrop_sunnyMorning.webp',
-  foggyMorning: '/sky/backdrop_foggyMorning.webp',
-  rainyDay: '/sky/backdrop_rainyDay.webp',
-  sunsetGolden: '/sky/backdrop_sunsetGolden.webp',
-  night: '/sky/backdrop_night.webp',
+  sunnyMorning: asset('sky/backdrop_sunnyMorning.webp'),
+  foggyMorning: asset('sky/backdrop_foggyMorning.webp'),
+  rainyDay: asset('sky/backdrop_rainyDay.webp'),
+  sunsetGolden: asset('sky/backdrop_sunsetGolden.webp'),
+  night: asset('sky/backdrop_night.webp'),
 }
 // GEO_SkyBackdrop's authored size (Blender) vs the source photos' native size — used to crop
 // the wider-than-plane photos to "cover" without stretching. Keep in sync with Blender if the
@@ -386,7 +387,7 @@ void main(){
 }
 `
 function SkyBackdrop({ weather }) {
-  const { scene } = useGLTF(GLB_URL, '/draco/')
+  const { scene } = useGLTF(GLB_URL, DRACO_PATH)
   const matRef = useRef()
   const texMap = useTexture(SKY_BACKDROP_URLS)
   useMemo(() => {
@@ -521,14 +522,14 @@ function MobileScrollDriver() {
 // the thumbnails cross-fade in order; clicking the screen opens the current project's case study
 // in a NEW tab. Add more here (same 1.48:1 thumbnail frame) to extend the reel.
 const PROJECTS = [
-  { thumb: '/projects/sbnri.png', url: 'https://www.figma.com/proto/jzS2IyxvAHpRGq1Tw7vZ5k/PPTs?node-id=131-12134&viewport=116%2C374%2C0.17&t=XTolNU1KEmk37Cuf-1&scaling=contain&content-scaling=fixed&page-id=131%3A12073' },
-  { thumb: '/projects/pinelabs.png', url: 'https://www.figma.com/proto/UG9EtRhwPyYKmknhHvhEJq/Portfolio-Website?page-id=3787%3A4489&node-id=3787-4490&viewport=-15571%2C174%2C0.4&t=bFGy284DuOVPumnN-1&scaling=contain&content-scaling=fixed' },
-  { thumb: '/projects/pinelabs-tms.png', url: 'https://www.figma.com/proto/UG9EtRhwPyYKmknhHvhEJq/Portfolio-Website?page-id=3687%3A2924&node-id=3687-3497&viewport=344%2C534%2C0.04&t=ape4QqqhklKEhhx0-1&scaling=contain&content-scaling=fixed' },
-  { thumb: '/projects/sbnri-christmas.png', url: 'https://www.figma.com/proto/RiU7UIEjiiE1YgoJYORCK6/Christmas-Bonanza-PPT?page-id=0%3A1%3Fnode-id%3D30-25930&viewport=2699%2C-1299%2C0.46&t=rNobZYksRAHUk422-1&scaling=contain&content-scaling=fixed&node-id=30-25930' },
+  { thumb: asset('projects/sbnri.png'), url: 'https://www.figma.com/proto/jzS2IyxvAHpRGq1Tw7vZ5k/PPTs?node-id=131-12134&viewport=116%2C374%2C0.17&t=XTolNU1KEmk37Cuf-1&scaling=contain&content-scaling=fixed&page-id=131%3A12073' },
+  { thumb: asset('projects/pinelabs.png'), url: 'https://www.figma.com/proto/UG9EtRhwPyYKmknhHvhEJq/Portfolio-Website?page-id=3787%3A4489&node-id=3787-4490&viewport=-15571%2C174%2C0.4&t=bFGy284DuOVPumnN-1&scaling=contain&content-scaling=fixed' },
+  { thumb: asset('projects/pinelabs-tms.png'), url: 'https://www.figma.com/proto/UG9EtRhwPyYKmknhHvhEJq/Portfolio-Website?page-id=3687%3A2924&node-id=3687-3497&viewport=344%2C534%2C0.04&t=ape4QqqhklKEhhx0-1&scaling=contain&content-scaling=fixed' },
+  { thumb: asset('projects/sbnri-christmas.png'), url: 'https://www.figma.com/proto/RiU7UIEjiiE1YgoJYORCK6/Christmas-Bonanza-PPT?page-id=0%3A1%3Fnode-id%3D30-25930&viewport=2699%2C-1299%2C0.46&t=rNobZYksRAHUk422-1&scaling=contain&content-scaling=fixed&node-id=30-25930' },
 ]
 
 function DeskScene({ lampOn, setLampOn }) {
-  const { scene } = useGLTF(GLB_URL, '/draco/')
+  const { scene } = useGLTF(GLB_URL, DRACO_PATH)
   const hinge = useRef(null)
   const camera = useThree((s) => s.camera)
   // null on the MOBILE path — there's no <ScrollControls> provider there, the document scrolls
@@ -552,7 +553,7 @@ function DeskScene({ lampOn, setLampOn }) {
   }, [projTex])
   // Résumé mapped onto the standee page (GEO_StandeePage, UVs span 0..1 from local X→U, Z→V).
   // flipY=false orients it upright (V maps local Z, unlike the laptop screen's local-Y mapping).
-  const resumeTex = useTexture('/projects/resume.png?v=3')
+  const resumeTex = useTexture(asset('projects/resume.png?v=3'))
   useMemo(() => {
     resumeTex.colorSpace = THREE.SRGBColorSpace
     resumeTex.flipY = false
@@ -1060,7 +1061,7 @@ function FramedPoster({ map, x, y, w, h, rot = 0, z = -1.43, frame = 0.02, mat =
 // the reference. Positions tuned to the locked camera.
 function WallArt() {
   const tex = useTexture({
-    poster: '/art/poster_longway.png',
+    poster: asset('art/poster_longway.png'),
   })
   useMemo(() => {
     Object.values(tex).forEach((t) => { t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4 })
@@ -1079,7 +1080,7 @@ function WallArt() {
 // doesn't bloat scene.glb. It's already ~1 m tall + Y-up with its front facing +Z (the camera),
 // so it just needs positioning flat against the wall (back near three-Z ≈ -1.45). Lit by the scene.
 function WallGuitar() {
-  const { scene } = useGLTF('/models/acoustic_guitar.glb')
+  const { scene } = useGLTF(asset('models/acoustic_guitar.glb'))
   const model = useMemo(() => {
     const m = scene.clone(true)
     // Scene distance fog is opt-in only for the small exterior set (see DeskScene) — this
@@ -1094,7 +1095,7 @@ function WallGuitar() {
   }, [scene])
   return <primitive object={model} position={[-0.9, 0.95, -1.40]} scale={0.9} />
 }
-useGLTF.preload('/models/acoustic_guitar.glb')
+useGLTF.preload(asset('models/acoustic_guitar.glb'))
 
 // --- Laptop lid stickers: paper stickers on the OUTER (closed-facing) lid surface ----------
 // Layout is read from the FIGMA SOURCE OF TRUTH: frame 234:990 in Portfolio-2026, whose
@@ -1115,11 +1116,11 @@ useGLTF.preload('/models/acoustic_guitar.glb')
 // The same check confirms Astronaut -150, Figma sticker 165, IITR -20.84. Cherry has no rotation
 // but IS mirrored vertically (-scale-y-100 in Figma) -> flipY.
 const LAPTOP_STICKERS = [
-  { url: '/stickers/claude.png',    u: 0.13185, v: 0.21313, size:  87.276 / 735, rotDeg: 150,    ratio: 468 / 468 },
-  { url: '/stickers/figma.png',     u: 0.23934, v: 0.47936, size:  89.372 / 735, rotDeg: 165,    ratio: 368 / 440 },
-  { url: '/stickers/cherry.png',    u: 0.50068, v: 0.50098, size:  78.000 / 735, rotDeg: 0,      ratio: 312 / 312, flipY: true },
-  { url: '/stickers/astronaut.png', u: 0.14422, v: 0.81801, size: 118.347 / 735, rotDeg: -150,   ratio: 504 / 504 },
-  { url: '/stickers/iitr.png',      u: 0.39613, v: 0.78700, size: 117.763 / 735, rotDeg: -20.84, ratio: 572 / 572 },
+  { url: asset('stickers/claude.png'),    u: 0.13185, v: 0.21313, size:  87.276 / 735, rotDeg: 150,    ratio: 468 / 468 },
+  { url: asset('stickers/figma.png'),     u: 0.23934, v: 0.47936, size:  89.372 / 735, rotDeg: 165,    ratio: 368 / 440 },
+  { url: asset('stickers/cherry.png'),    u: 0.50068, v: 0.50098, size:  78.000 / 735, rotDeg: 0,      ratio: 312 / 312, flipY: true },
+  { url: asset('stickers/astronaut.png'), u: 0.14422, v: 0.81801, size: 118.347 / 735, rotDeg: -150,   ratio: 504 / 504 },
+  { url: asset('stickers/iitr.png'),      u: 0.39613, v: 0.78700, size: 117.763 / 735, rotDeg: -20.84, ratio: 572 / 572 },
 ]
 // The lid ROTATES via Laptop_Hinge during scroll (opening) — these can't be independent
 // world-space planes like WallArt/FramedPoster (those only work because the wall never moves).
@@ -1128,7 +1129,7 @@ const LAPTOP_STICKERS = [
 // for the desk-mat placement), then added as CHILDREN of the lid mesh so they inherit its hinge
 // rotation for free from then on, whatever angle it's later opened to.
 function LaptopStickers() {
-  const { scene } = useGLTF(GLB_URL, '/draco/')
+  const { scene } = useGLTF(GLB_URL, DRACO_PATH)
   const textures = useTexture(LAPTOP_STICKERS.map((s) => s.url))
   useEffect(() => {
     const lid = scene.getObjectByName('GEO_LaptopLid')
@@ -1300,7 +1301,7 @@ function FrameLimiter({ fps = 30 }) {
 // missing). Stays on the default layer 0 so it lights interior meshes only (see Lights). The
 // warm shade/bulb emissive + bloom give the visible glow; this light does the actual spill.
 function LampLight({ on, weather }) {
-  const { scene } = useGLTF(GLB_URL, '/draco/')
+  const { scene } = useGLTF(GLB_URL, DRACO_PATH)
   const ref = useRef()
   const pos = useMemo(() => {
     const a = scene.getObjectByName(LAMP_LIGHT.anchor)
@@ -1714,4 +1715,4 @@ export default function App() {
   )
 }
 
-useGLTF.preload(GLB_URL, '/draco/')
+useGLTF.preload(GLB_URL, DRACO_PATH)
