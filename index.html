@@ -13,6 +13,11 @@
          link the browser silently requests /favicon.ico from the DOMAIN ROOT — which ignores the
          base path entirely and 404s on Pages. -->
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <!-- iOS ignores manifest.webmanifest icons entirely for "Add to Home Screen" — this is the
+         only thing that controls that icon. 180x180, flattened onto its own solid background
+         (no alpha) since iOS applies its own corner-rounding mask and handles transparency
+         inconsistently across versions. -->
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
     <link rel="manifest" href="/manifest.webmanifest" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
