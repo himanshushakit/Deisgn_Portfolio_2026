@@ -144,8 +144,24 @@ export const HIGH_Q = QUALITY === 'high'
 // the viewport's aspect, so what transfers across devices is the PIXEL COUNT, which is what this is.
 // The budget still matters for LARGE mobile screens: a tablet asking for dpr 3 would be 8+ MP, so it
 // is held to ~2.6 MP instead (an iPad lands on dpr ~1.6).
+//
+// ── DPR CAP LOWERED 3 -> 2 (2026-08-12): native (dpr 3) was crashing real phones ─────────
+// The "render native, no upscaling" state above sounded right but was never load-tested against
+// real hardware memory limits, only against desktop-GPU emulation. Reports came in of the live site
+// hard-crashing on scroll on real iPhones/Android (Safari's "A problem repeatedly occurred", a
+// WebContent OOM kill — confirmed via a real iPhone 12 mini over Safari's remote Web Inspector:
+// Timelines showed the tab dying under 1s into load, before the GLB/textures had even been
+// requested, ruling out asset weight and pointing at the renderer's own target memory instead).
+// Bisected live on-device with the ?dpr= debug override: dpr 3 (native) crashed every time, dpr 2
+// did not, across repeated reloads. Every render target in the postprocessing chain (AO, bloom's
+// HalfFloat mip chain, SMAA, the composer's own input/output/depth buffers) scales with dpr², so
+// dropping 3 -> 2 cuts total render-target memory by (3/2)² ≈ 2.25x — roughly 55% fewer pixels
+// pushed through the whole pipeline every frame, not just a softer final image. Only tested on one
+// device (iPhone 12 mini, 4GB RAM); phones with less RAM than that were not verified and could
+// still be at risk. dpr 2 is still genuine 2x/"retina" density, well above the old 1.25/1.6 blurry
+// baselines below. ?dpr= still overrides this for on-device A/B testing.
 const LOW_PIXEL_BUDGET = 2.6e6   // above a phone's native ask, so LOW_DPR_MAX binds there; caps tablets
-const LOW_DPR_MAX = 3            // never exceeds the device's real devicePixelRatio anyway
+const LOW_DPR_MAX = 2            // real-device memory ceiling, not a devicePixelRatio limit — see above
 function lowDprCap() {
   try {
     const w = window.innerWidth || 852

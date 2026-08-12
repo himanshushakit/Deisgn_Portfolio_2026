@@ -1513,8 +1513,8 @@ function RotateGate() {
     <div className="rotate-gate">
       <div className="rotate-gate-phone" />
       <p className="rotate-gate-title">
-        Rotate your device
-        <span className="rotate-gate-sub">This experience is designed for landscape</span>
+        Rotate to view
+        <span className="rotate-gate-sub">Best experienced on a laptop/desktop</span>
       </p>
     </div>
   )
@@ -1657,6 +1657,18 @@ export default function App() {
             allocates HalfFloat (RGBA16F, 8 bytes/px) targets for HDR bloom, so an 8x-multisampled
             one is what was quietly eating the mobile memory budget — dropping it is what buys the
             higher dpr, and <SMAA> below puts the edge antialiasing back for a fraction of the cost. */}
+        {/* SAFARI/WEBKIT FIX (2026-08-12): `postprocessing` is pinned to 6.38.3 in package.json
+            (not a range) — 6.39.0 introduced a "stable depth texture" blit (EffectComposer.
+            blitDepthBuffer, for passes that set needsDepthTexture — N8AO always does, and so does
+            SMAAEffect) that WebKit's stricter WebGL2 validation rejects every single frame:
+            "glBlitFramebuffer: Read and write depth stencil attachments cannot be the same image."
+            Chrome/Firefox silently tolerate the same call, which is why this only ever showed up in
+            Safari (desktop AND iOS — reproduced on both with Playwright's WebKit engine, independent
+            of device tier/multisampling). On a real iPhone the failing call every frame is what was
+            crashing the tab (Safari's "A Problem Occurred" reload) shortly after scrolling starts.
+            Still broken as of postprocessing 6.39.4 (latest at the time). 6.38.3 predates that blit
+            path entirely. Do NOT let this drift back onto a ^6.39/^7 range without re-testing in
+            actual Safari — `npm outdated` will always show it as behind. */}
         <EffectComposer disableNormalPass multisampling={Q.multisampling}>
           {/* Ambient occlusion FIRST — soft broad contact grounding (desk/wall junction, under the
               sill, under props). World-scale radius for a painterly soft-shadow read, not hard SSAO
