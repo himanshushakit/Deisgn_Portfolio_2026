@@ -12,7 +12,10 @@
          `base`, so these become /<repo>/… on a GitHub Pages project site. Without an explicit icon
          link the browser silently requests /favicon.ico from the DOMAIN ROOT — which ignores the
          base path entirely and 404s on Pages. -->
-    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <!-- ?v=2 cache-busts Chrome's separate, very sticky favicon cache (it often won't refetch on a
+         normal reload even with dev tools "disable cache" on) — bump this whenever the artwork
+         changes, same pattern as GLB_URL's ?v= in config/scene.js. -->
+    <link rel="icon" href="/favicon.svg?v=2" type="image/svg+xml" />
     <!-- iOS ignores manifest.webmanifest icons entirely for "Add to Home Screen" — this is the
          only thing that controls that icon. 180x180, flattened onto its own solid background
          (no alpha) since iOS applies its own corner-rounding mask and handles transparency
