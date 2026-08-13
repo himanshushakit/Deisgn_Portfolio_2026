@@ -222,7 +222,23 @@ export const QUALITY_PRESETS = {
     logarithmicDepthBuffer: false,    // see LOG DEPTH below
     powerPreference: 'high-performance', // ask Android for the big GPU rather than the efficiency one
     multisampling: 0,                 // see HISTORY 2 — this is what pays for the higher dpr
-    aoEnabled: true,
+    // ── N8AO disabled on mobile (2026-08-13): real-device black-screen reports ──────────────
+    // Two independent Android phones (Samsung S10, Google Pixel) showed the interior render
+    // entirely black while only the sky-backdrop photo through the window stayed visible —
+    // the one surface in the scene with NO lighting/AO dependency at all (SkyBackdrop is a raw
+    // unlit ShaderMaterial). Everything else goes through N8AO. That pattern — near geometry
+    // black, far background fine — matches N8AO's occlusion term resolving to "fully occluded"
+    // near the camera while distant geometry falls outside its aoRadius/distanceFalloff and
+    // stays unaffected, which fits a shader/precision issue on those GPUs' drivers rather than a
+    // memory crash (the earlier `postprocessing` 6.38.3 pin fixed a real, confirmed WebGL spec
+    // violation, but the live bundle already has that fix and the bug still reproduced — so N8AO
+    // itself, not that library bug, is the current leading suspect). Not yet confirmed via
+    // ?ao=0 on either device (no Android device was available to re-test at the time), so this
+    // is the best-evidence call, not a proven one — re-enable and investigate further if a real
+    // device test later shows AO wasn't actually the cause. Losing AO only costs the subtle soft
+    // contact-shadow grounding under props on mobile; every other light/shadow/bloom is
+    // unaffected. `smaa`, `aoHalfRes` are irrelevant with AO off but left set for a quick revert.
+    aoEnabled: false,
     aoHalfRes: true,                  // quarter-cost AO; it's a broad soft gradient, not detail
     smaa: true,                       // cheap single-pass edge AA, replacing the 8x MSAA target
     // ── Mip LOD bias for the two TEXT-BEARING textures (résumé + project thumbnails) ──
