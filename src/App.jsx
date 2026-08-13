@@ -1534,6 +1534,41 @@ function useImmersiveViewport() {
   }, [])
 }
 
+// ── WebGL context-loss recovery (2026-08-13) ────────────────────────────────────────────────
+// Neither three.js nor @react-three/fiber does anything on their own when the GPU context is
+// lost — confirmed by reading the r3f source, there is no 'webglcontextlost' listener anywhere
+// in it. Without one, a lost context (the browser reclaiming GPU memory under pressure — the
+// most likely cause on real phones given this scene's texture/render-target weight) leaves the
+// canvas permanently black forever with the rest of the page (weather selector, etc.) still
+// alive and responsive — which is exactly the "loads fine, then goes black" reports from real
+// devices (iPhone 14, others), as distinct from the earlier full-tab-crash reports.
+// Actually re-uploading every texture/material/shader in this scene by hand after restoration
+// is a large, fragile undertaking for a portfolio site, so the fallback here is a clean reload
+// instead — the same outcome a first visit gets, just automatic. `preventDefault()` on the
+// lost-context event is required for the browser to even attempt restoration at all; harmless
+// to call even though we don't rely on restoration succeeding, since a reload is already queued.
+// Capped at 2 auto-reloads per tab session (sessionStorage, so a fresh tab/visit gets a full
+// budget again) so a device that's fundamentally over the memory budget can't loop forever —
+// past the cap it just leaves the black canvas rather than reload-looping.
+const WEBGL_RELOAD_KEY = 'webglReloadCount'
+const WEBGL_RELOAD_MAX = 2
+function useWebGLContextRecovery(canvas) {
+  useEffect(() => {
+    if (!canvas) return
+    const onLost = (e) => {
+      e.preventDefault()
+      let count = 0
+      try { count = Number(sessionStorage.getItem(WEBGL_RELOAD_KEY) || '0') } catch (err) {}
+      console.warn(`[webgl] context lost (reload ${count + 1}/${WEBGL_RELOAD_MAX})`)
+      if (count >= WEBGL_RELOAD_MAX) return
+      try { sessionStorage.setItem(WEBGL_RELOAD_KEY, String(count + 1)) } catch (err) {}
+      window.location.reload()
+    }
+    canvas.addEventListener('webglcontextlost', onLost, false)
+    return () => canvas.removeEventListener('webglcontextlost', onLost, false)
+  }, [canvas])
+}
+
 export default function App() {
   // Weather: one of the presets in PRESETS. The 3D components read `weather.current.live`
   // each frame (eased toward `targetLive` by WeatherDriver over ~1s). `preset` is the discrete
@@ -1563,6 +1598,9 @@ export default function App() {
   // On desktop every value here is the approved HIGH one, so this reads exactly as before.
   const Q = useMemo(() => qp(), [])
   useImmersiveViewport()   // best-effort landscape lock + fullscreen; RotateGate covers the refusals
+  // Set once via Canvas's onCreated below, once the real WebGL context/canvas element exists.
+  const [glCanvas, setGlCanvas] = useState(null)
+  useWebGLContextRecovery(glCanvas)
 
   // On a weather switch: point the transition at the new preset, and reset the lamp to that
   // weather's DEFAULT (night ON; morning + fog OFF). Manual lamp taps in between stay independent.
@@ -1608,6 +1646,8 @@ export default function App() {
           toneMappingExposure: TONE_MAPPING_EXPOSURE,
         }}
         camera={{ position: WEBSITE.pos.toArray(), fov: WEBSITE.fov, near: 0.05, far: 40 }}
+        // Hands the real <canvas> element to useWebGLContextRecovery above, once it exists.
+        onCreated={(state) => setGlCanvas(state.gl.domElement)}
       >
         <color attach="background" args={[BACKGROUND_COLOR]} />
         {/* Atmospheric perspective: distant exterior hazes toward sky colour; near keeps the
