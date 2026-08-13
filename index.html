@@ -2,6 +2,16 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
+    <!-- Google tag (gtag.js) — analytics only, placed early in <head> per Google's own setup
+         instructions so it can start listening before anything else loads. -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-WNNS814TL9"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+
+      gtag('config', 'G-WNNS814TL9');
+    </script>
     <!-- viewport-fit=cover so the scene fills past the notch/home-indicator in landscape (the UI
          insets itself with env(safe-area-inset-*), see styles.css). Zoom is disabled because
          pinch-zooming a WebGL canvas just breaks the fixed camera framing. -->
