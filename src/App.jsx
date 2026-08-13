@@ -555,10 +555,10 @@ function ScrollAnalytics() {
 // the thumbnails cross-fade in order; clicking the screen opens the current project's case study
 // in a NEW tab. Add more here (same 1.48:1 thumbnail frame) to extend the reel.
 const PROJECTS = [
-  { thumb: asset('projects/sbnri.png'), url: 'https://www.figma.com/proto/jzS2IyxvAHpRGq1Tw7vZ5k/PPTs?node-id=131-12134&viewport=116%2C374%2C0.17&t=XTolNU1KEmk37Cuf-1&scaling=contain&content-scaling=fixed&page-id=131%3A12073' },
-  { thumb: asset('projects/pinelabs.png'), url: 'https://www.figma.com/proto/UG9EtRhwPyYKmknhHvhEJq/Portfolio-Website?page-id=3787%3A4489&node-id=3787-4490&viewport=-15571%2C174%2C0.4&t=bFGy284DuOVPumnN-1&scaling=contain&content-scaling=fixed' },
-  { thumb: asset('projects/pinelabs-tms.png'), url: 'https://www.figma.com/proto/UG9EtRhwPyYKmknhHvhEJq/Portfolio-Website?page-id=3687%3A2924&node-id=3687-3497&viewport=344%2C534%2C0.04&t=ape4QqqhklKEhhx0-1&scaling=contain&content-scaling=fixed' },
-  { thumb: asset('projects/sbnri-christmas.png'), url: 'https://www.figma.com/proto/RiU7UIEjiiE1YgoJYORCK6/Christmas-Bonanza-PPT?page-id=0%3A1%3Fnode-id%3D30-25930&viewport=2699%2C-1299%2C0.46&t=rNobZYksRAHUk422-1&scaling=contain&content-scaling=fixed&node-id=30-25930' },
+  { name: 'SBNRI revmap', thumb: asset('projects/sbnri.png'), url: 'https://www.figma.com/proto/jzS2IyxvAHpRGq1Tw7vZ5k/PPTs?node-id=131-12134&viewport=116%2C374%2C0.17&t=XTolNU1KEmk37Cuf-1&scaling=contain&content-scaling=fixed&page-id=131%3A12073' },
+  { name: 'Pinelabs POS', thumb: asset('projects/pinelabs.png'), url: 'https://www.figma.com/proto/UG9EtRhwPyYKmknhHvhEJq/Portfolio-Website?page-id=3787%3A4489&node-id=3787-4490&viewport=-15571%2C174%2C0.4&t=bFGy284DuOVPumnN-1&scaling=contain&content-scaling=fixed' },
+  { name: 'Pinelabs TMS', thumb: asset('projects/pinelabs-tms.png'), url: 'https://www.figma.com/proto/UG9EtRhwPyYKmknhHvhEJq/Portfolio-Website?page-id=3687%3A2924&node-id=3687-3497&viewport=344%2C534%2C0.04&t=ape4QqqhklKEhhx0-1&scaling=contain&content-scaling=fixed' },
+  { name: 'Christmas Campaign', thumb: asset('projects/sbnri-christmas.png'), url: 'https://www.figma.com/proto/RiU7UIEjiiE1YgoJYORCK6/Christmas-Bonanza-PPT?page-id=0%3A1%3Fnode-id%3D30-25930&viewport=2699%2C-1299%2C0.46&t=rNobZYksRAHUk422-1&scaling=contain&content-scaling=fixed&node-id=30-25930' },
 ]
 
 function DeskScene({ lampOn, setLampOn }) {
@@ -962,7 +962,14 @@ function DeskScene({ lampOn, setLampOn }) {
   const onSceneClick = (e) => {
     if (/screensurface/i.test(e.object.name)) {
       e.stopPropagation()
-      window.open(PROJECTS[curProject.current].url, '_blank', 'noopener') // the project currently on screen
+      const project = PROJECTS[curProject.current]
+      // GA4 custom event, one per click on the laptop screen — project_name is whichever
+      // thumbnail is currently on screen (curProject, kept in sync with the scroll-driven
+      // cross-fade in the useFrame below), same pattern/guard as ScrollAnalytics' scroll_depth.
+      if (typeof window.gtag === 'function') {
+        window.gtag('event', 'project_click', { project_name: project.name })
+      }
+      window.open(project.url, '_blank', 'noopener') // the project currently on screen
       return
     }
     if (!/lamp/i.test(e.object.name)) return
