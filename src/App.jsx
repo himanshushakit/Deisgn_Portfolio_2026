@@ -518,6 +518,39 @@ function MobileScrollDriver() {
   return null
 }
 
+// ── Scroll-depth analytics: GA4 custom event at 25/50/75/100% scroll progress ────────────────
+// Reads the SAME normalized 0..1 progress DeskScene's camera/scroll animation already runs on
+// (scroll.offset on desktop from ScrollControls, mobileScroll.offset on mobile from the real
+// document scroll) rather than raw pixel scroll — the two paths scroll completely different
+// containers at completely different pixel ranges, so "percent scrolled" only means the same
+// thing on both if it's read from this shared, already-normalized value, not window.scrollY.
+// GA4's own built-in "scroll" enhanced-measurement event listens to the document/window scroll,
+// which is real on mobile but not on desktop (ScrollControls scrolls its own private off-screen
+// container) — so it can't be relied on here either; this fires a plain custom event manually
+// instead, named to avoid colliding with GA4's built-in one.
+// One-shot per threshold per page load: a ref (not state), since this runs every frame and must
+// never trigger a re-render. `window.gtag` may not exist yet (script is `async`, or blocked by
+// an ad blocker/tracking prevention) — every call is guarded, never assumed present.
+const SCROLL_DEPTH_THRESHOLDS = [25, 50, 75, 100]
+function ScrollAnalytics() {
+  const scroll = useScroll()   // null on mobile (no <ScrollControls> there) — see App/DeskScene
+  const fired = useRef(new Set())
+  useFrame(() => {
+    if (DBG_SCROLL != null) return   // ?scroll= debug/headless capture pins -> not a real visit
+    const p = scroll ? scroll.offset : mobileScroll.offset
+    const pct = Math.round(p * 100)
+    for (const threshold of SCROLL_DEPTH_THRESHOLDS) {
+      if (pct >= threshold && !fired.current.has(threshold)) {
+        fired.current.add(threshold)
+        if (typeof window.gtag === 'function') {
+          window.gtag('event', 'scroll_depth', { percent_scrolled: threshold })
+        }
+      }
+    }
+  })
+  return null
+}
+
 // Portfolio projects shown ON the laptop screen. As the user scrolls through the SCREEN dwell,
 // the thumbnails cross-fade in order; clicking the screen opens the current project's case study
 // in a NEW tab. Add more here (same 1.48:1 thumbnail frame) to extend the reel.
@@ -1683,10 +1716,12 @@ export default function App() {
         {IS_MOBILE_VIEWPORT ? (
           <>
             <MobileScrollDriver />
+            <ScrollAnalytics />
             <DeskScene lampOn={lampOn} setLampOn={setLampOn} />
           </>
         ) : (
           <ScrollControls pages={SCROLL_PAGES} damping={0.65}>
+            <ScrollAnalytics />
             <DeskScene lampOn={lampOn} setLampOn={setLampOn} />
           </ScrollControls>
         )}
