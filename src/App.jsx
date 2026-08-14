@@ -521,12 +521,32 @@ function MobileScrollDriver() {
 // Portfolio projects shown ON the laptop screen. As the user scrolls through the SCREEN dwell,
 // the thumbnails cross-fade in order; clicking the screen opens the current project's case study
 // in a NEW tab. Add more here (same 1.48:1 thumbnail frame) to extend the reel.
+// gaEvent: fired (no params) via gtag on click — one distinct event name per project, per thumbnail.
 const PROJECTS = [
-  { thumb: asset('projects/sbnri.png'), url: 'https://www.figma.com/proto/jzS2IyxvAHpRGq1Tw7vZ5k/PPTs?node-id=131-12134&viewport=116%2C374%2C0.17&t=XTolNU1KEmk37Cuf-1&scaling=contain&content-scaling=fixed&page-id=131%3A12073' },
-  { thumb: asset('projects/pinelabs.png'), url: 'https://www.figma.com/proto/UG9EtRhwPyYKmknhHvhEJq/Portfolio-Website?page-id=3787%3A4489&node-id=3787-4490&viewport=-15571%2C174%2C0.4&t=bFGy284DuOVPumnN-1&scaling=contain&content-scaling=fixed' },
-  { thumb: asset('projects/pinelabs-tms.png'), url: 'https://www.figma.com/proto/UG9EtRhwPyYKmknhHvhEJq/Portfolio-Website?page-id=3687%3A2924&node-id=3687-3497&viewport=344%2C534%2C0.04&t=ape4QqqhklKEhhx0-1&scaling=contain&content-scaling=fixed' },
-  { thumb: asset('projects/sbnri-christmas.png'), url: 'https://www.figma.com/proto/RiU7UIEjiiE1YgoJYORCK6/Christmas-Bonanza-PPT?page-id=0%3A1%3Fnode-id%3D30-25930&viewport=2699%2C-1299%2C0.46&t=rNobZYksRAHUk422-1&scaling=contain&content-scaling=fixed&node-id=30-25930' },
+  { thumb: asset('projects/sbnri.png'), gaEvent: 'sbnri_revamp_click', url: 'https://www.figma.com/proto/jzS2IyxvAHpRGq1Tw7vZ5k/PPTs?node-id=131-12134&viewport=116%2C374%2C0.17&t=XTolNU1KEmk37Cuf-1&scaling=contain&content-scaling=fixed&page-id=131%3A12073' },
+  { thumb: asset('projects/pinelabs.png'), gaEvent: 'pinelabs_pos_click', url: 'https://www.figma.com/proto/UG9EtRhwPyYKmknhHvhEJq/Portfolio-Website?page-id=3787%3A4489&node-id=3787-4490&viewport=-15571%2C174%2C0.4&t=bFGy284DuOVPumnN-1&scaling=contain&content-scaling=fixed' },
+  { thumb: asset('projects/pinelabs-tms.png'), gaEvent: 'pinelabs_tms_click', url: 'https://www.figma.com/proto/UG9EtRhwPyYKmknhHvhEJq/Portfolio-Website?page-id=3687%3A2924&node-id=3687-3497&viewport=344%2C534%2C0.04&t=ape4QqqhklKEhhx0-1&scaling=contain&content-scaling=fixed' },
+  { thumb: asset('projects/sbnri-christmas.png'), gaEvent: 'sbnri_christmas_click', url: 'https://www.figma.com/proto/RiU7UIEjiiE1YgoJYORCK6/Christmas-Bonanza-PPT?page-id=0%3A1%3Fnode-id%3D30-25930&viewport=2699%2C-1299%2C0.46&t=rNobZYksRAHUk422-1&scaling=contain&content-scaling=fixed&node-id=30-25930' },
 ]
+
+// GA4 custom event, fired once per page load, when the visitor reaches 100% scroll — this
+// experience's timeline ends at the résumé standee, so 100% scroll == résumé viewed. Same
+// normalized-progress source as everything else scroll-driven (scroll.offset from ScrollControls
+// on desktop, mobileScroll.offset from the real document scroll on mobile) rather than raw pixel
+// scroll, since those two paths scroll completely different containers/ranges.
+function ResumeViewTracker() {
+  const scroll = useScroll()   // null on mobile (no <ScrollControls> there) — see App/DeskScene
+  const fired = useRef(false)
+  useFrame(() => {
+    if (DBG_SCROLL != null || fired.current) return   // ?scroll= debug/headless capture -> not a real visit
+    const p = scroll ? scroll.offset : mobileScroll.offset
+    if (Math.round(p * 100) >= 100) {
+      fired.current = true
+      if (typeof window.gtag === 'function') window.gtag('event', 'resume_viewed')
+    }
+  })
+  return null
+}
 
 function DeskScene({ lampOn, setLampOn }) {
   const { scene } = useGLTF(GLB_URL, DRACO_PATH)
@@ -929,7 +949,9 @@ function DeskScene({ lampOn, setLampOn }) {
   const onSceneClick = (e) => {
     if (/screensurface/i.test(e.object.name)) {
       e.stopPropagation()
-      window.open(PROJECTS[curProject.current].url, '_blank', 'noopener') // the project currently on screen
+      const project = PROJECTS[curProject.current]
+      if (typeof window.gtag === 'function') window.gtag('event', project.gaEvent)
+      window.open(project.url, '_blank', 'noopener') // the project currently on screen
       return
     }
     if (!/lamp/i.test(e.object.name)) return
@@ -1683,10 +1705,12 @@ export default function App() {
         {IS_MOBILE_VIEWPORT ? (
           <>
             <MobileScrollDriver />
+            <ResumeViewTracker />
             <DeskScene lampOn={lampOn} setLampOn={setLampOn} />
           </>
         ) : (
           <ScrollControls pages={SCROLL_PAGES} damping={0.65}>
+            <ResumeViewTracker />
             <DeskScene lampOn={lampOn} setLampOn={setLampOn} />
           </ScrollControls>
         )}
