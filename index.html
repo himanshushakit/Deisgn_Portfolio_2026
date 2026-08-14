@@ -26,6 +26,14 @@
          normal reload even with dev tools "disable cache" on) — bump this whenever the artwork
          changes, same pattern as GLB_URL's ?v= in config/scene.js. -->
     <link rel="icon" href="/favicon.svg?v=2" type="image/svg+xml" />
+    <!-- Google Search's own favicon extraction has weaker/inconsistent SVG support compared to
+         browsers (which is why the SERP result was showing a generic globe icon despite the SVG
+         above working fine as the actual browser-tab favicon) — Google's own guidance wants a
+         square raster icon, ideally a multiple of 48x48. Reuses icon-192.png (already exists for
+         the PWA manifest, same brand mark) rather than a new asset. This only fixes it for
+         Google's NEXT crawl of the page — it won't change the already-cached SERP entry until
+         Google recrawls, which Search Console's "Request Indexing" can nudge but not force. -->
+    <link rel="icon" href="/icon-192.png?v=1" type="image/png" sizes="192x192" />
     <!-- iOS ignores manifest.webmanifest icons entirely for "Add to Home Screen" — this is the
          only thing that controls that icon. 180x180, flattened onto its own solid background
          (no alpha) since iOS applies its own corner-rounding mask and handles transparency
