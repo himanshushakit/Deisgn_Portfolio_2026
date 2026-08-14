@@ -518,47 +518,14 @@ function MobileScrollDriver() {
   return null
 }
 
-// ── Scroll-depth analytics: GA4 custom event at 25/50/75/100% scroll progress ────────────────
-// Reads the SAME normalized 0..1 progress DeskScene's camera/scroll animation already runs on
-// (scroll.offset on desktop from ScrollControls, mobileScroll.offset on mobile from the real
-// document scroll) rather than raw pixel scroll — the two paths scroll completely different
-// containers at completely different pixel ranges, so "percent scrolled" only means the same
-// thing on both if it's read from this shared, already-normalized value, not window.scrollY.
-// GA4's own built-in "scroll" enhanced-measurement event listens to the document/window scroll,
-// which is real on mobile but not on desktop (ScrollControls scrolls its own private off-screen
-// container) — so it can't be relied on here either; this fires a plain custom event manually
-// instead, named to avoid colliding with GA4's built-in one.
-// One-shot per threshold per page load: a ref (not state), since this runs every frame and must
-// never trigger a re-render. `window.gtag` may not exist yet (script is `async`, or blocked by
-// an ad blocker/tracking prevention) — every call is guarded, never assumed present.
-const SCROLL_DEPTH_THRESHOLDS = [25, 50, 75, 100]
-function ScrollAnalytics() {
-  const scroll = useScroll()   // null on mobile (no <ScrollControls> there) — see App/DeskScene
-  const fired = useRef(new Set())
-  useFrame(() => {
-    if (DBG_SCROLL != null) return   // ?scroll= debug/headless capture pins -> not a real visit
-    const p = scroll ? scroll.offset : mobileScroll.offset
-    const pct = Math.round(p * 100)
-    for (const threshold of SCROLL_DEPTH_THRESHOLDS) {
-      if (pct >= threshold && !fired.current.has(threshold)) {
-        fired.current.add(threshold)
-        if (typeof window.gtag === 'function') {
-          window.gtag('event', 'scroll_depth', { percent_scrolled: threshold })
-        }
-      }
-    }
-  })
-  return null
-}
-
 // Portfolio projects shown ON the laptop screen. As the user scrolls through the SCREEN dwell,
 // the thumbnails cross-fade in order; clicking the screen opens the current project's case study
 // in a NEW tab. Add more here (same 1.48:1 thumbnail frame) to extend the reel.
 const PROJECTS = [
-  { name: 'SBNRI revmap', thumb: asset('projects/sbnri.png'), url: 'https://www.figma.com/proto/jzS2IyxvAHpRGq1Tw7vZ5k/PPTs?node-id=131-12134&viewport=116%2C374%2C0.17&t=XTolNU1KEmk37Cuf-1&scaling=contain&content-scaling=fixed&page-id=131%3A12073' },
-  { name: 'Pinelabs POS', thumb: asset('projects/pinelabs.png'), url: 'https://www.figma.com/proto/UG9EtRhwPyYKmknhHvhEJq/Portfolio-Website?page-id=3787%3A4489&node-id=3787-4490&viewport=-15571%2C174%2C0.4&t=bFGy284DuOVPumnN-1&scaling=contain&content-scaling=fixed' },
-  { name: 'Pinelabs TMS', thumb: asset('projects/pinelabs-tms.png'), url: 'https://www.figma.com/proto/UG9EtRhwPyYKmknhHvhEJq/Portfolio-Website?page-id=3687%3A2924&node-id=3687-3497&viewport=344%2C534%2C0.04&t=ape4QqqhklKEhhx0-1&scaling=contain&content-scaling=fixed' },
-  { name: 'Christmas Campaign', thumb: asset('projects/sbnri-christmas.png'), url: 'https://www.figma.com/proto/RiU7UIEjiiE1YgoJYORCK6/Christmas-Bonanza-PPT?page-id=0%3A1%3Fnode-id%3D30-25930&viewport=2699%2C-1299%2C0.46&t=rNobZYksRAHUk422-1&scaling=contain&content-scaling=fixed&node-id=30-25930' },
+  { thumb: asset('projects/sbnri.png'), url: 'https://www.figma.com/proto/jzS2IyxvAHpRGq1Tw7vZ5k/PPTs?node-id=131-12134&viewport=116%2C374%2C0.17&t=XTolNU1KEmk37Cuf-1&scaling=contain&content-scaling=fixed&page-id=131%3A12073' },
+  { thumb: asset('projects/pinelabs.png'), url: 'https://www.figma.com/proto/UG9EtRhwPyYKmknhHvhEJq/Portfolio-Website?page-id=3787%3A4489&node-id=3787-4490&viewport=-15571%2C174%2C0.4&t=bFGy284DuOVPumnN-1&scaling=contain&content-scaling=fixed' },
+  { thumb: asset('projects/pinelabs-tms.png'), url: 'https://www.figma.com/proto/UG9EtRhwPyYKmknhHvhEJq/Portfolio-Website?page-id=3687%3A2924&node-id=3687-3497&viewport=344%2C534%2C0.04&t=ape4QqqhklKEhhx0-1&scaling=contain&content-scaling=fixed' },
+  { thumb: asset('projects/sbnri-christmas.png'), url: 'https://www.figma.com/proto/RiU7UIEjiiE1YgoJYORCK6/Christmas-Bonanza-PPT?page-id=0%3A1%3Fnode-id%3D30-25930&viewport=2699%2C-1299%2C0.46&t=rNobZYksRAHUk422-1&scaling=contain&content-scaling=fixed&node-id=30-25930' },
 ]
 
 function DeskScene({ lampOn, setLampOn }) {
@@ -962,14 +929,7 @@ function DeskScene({ lampOn, setLampOn }) {
   const onSceneClick = (e) => {
     if (/screensurface/i.test(e.object.name)) {
       e.stopPropagation()
-      const project = PROJECTS[curProject.current]
-      // GA4 custom event, one per click on the laptop screen — project_name is whichever
-      // thumbnail is currently on screen (curProject, kept in sync with the scroll-driven
-      // cross-fade in the useFrame below), same pattern/guard as ScrollAnalytics' scroll_depth.
-      if (typeof window.gtag === 'function') {
-        window.gtag('event', 'project_click', { project_name: project.name })
-      }
-      window.open(project.url, '_blank', 'noopener') // the project currently on screen
+      window.open(PROJECTS[curProject.current].url, '_blank', 'noopener') // the project currently on screen
       return
     }
     if (!/lamp/i.test(e.object.name)) return
@@ -1723,12 +1683,10 @@ export default function App() {
         {IS_MOBILE_VIEWPORT ? (
           <>
             <MobileScrollDriver />
-            <ScrollAnalytics />
             <DeskScene lampOn={lampOn} setLampOn={setLampOn} />
           </>
         ) : (
           <ScrollControls pages={SCROLL_PAGES} damping={0.65}>
-            <ScrollAnalytics />
             <DeskScene lampOn={lampOn} setLampOn={setLampOn} />
           </ScrollControls>
         )}
