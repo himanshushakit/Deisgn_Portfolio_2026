@@ -522,11 +522,21 @@ function MobileScrollDriver() {
 // the thumbnails cross-fade in order; clicking the screen opens the current project's case study
 // in a NEW tab. Add more here (same 1.48:1 thumbnail frame) to extend the reel.
 // gaEvent: fired (no params) via gtag on click — one distinct event name per project, per thumbnail.
+//
+// MOBILE-SHARPER THUMBNAILS (2026-08-14): projects-mobile/ holds the SAME art at 2x the shipped
+// projects/ resolution (3200x2162 vs 1600x1081) — re-exported from the original hi-res sources,
+// downscaled from the delivered 5920x4000 handoff (see conversation: shipping those natively would
+// have added ~530MB of GPU texture memory across these 4 assets alone, easily enough to reintroduce
+// the real-device OOM crashes fixed by the dpr/AO changes in config/quality.js). This swap changes
+// ONLY which image file loads — it does not touch dpr, AO, or any other render setting, and desktop
+// is completely unaffected (still loads the original projects/ files, unchanged).
+// IS_MOBILE_VIEWPORT is resolved once at module load (utils/viewport.js), same timing as this
+// module-scope constant, so referencing it directly here (no hook, no re-render timing issue) is safe.
 const PROJECTS = [
-  { thumb: asset('projects/sbnri.png'), gaEvent: 'sbnri_revamp_click', url: 'https://www.figma.com/proto/jzS2IyxvAHpRGq1Tw7vZ5k/PPTs?node-id=131-12134&viewport=116%2C374%2C0.17&t=XTolNU1KEmk37Cuf-1&scaling=contain&content-scaling=fixed&page-id=131%3A12073' },
-  { thumb: asset('projects/pinelabs.png'), gaEvent: 'pinelabs_pos_click', url: 'https://www.figma.com/proto/UG9EtRhwPyYKmknhHvhEJq/Portfolio-Website?page-id=3787%3A4489&node-id=3787-4490&viewport=-15571%2C174%2C0.4&t=bFGy284DuOVPumnN-1&scaling=contain&content-scaling=fixed' },
-  { thumb: asset('projects/pinelabs-tms.png'), gaEvent: 'pinelabs_tms_click', url: 'https://www.figma.com/proto/UG9EtRhwPyYKmknhHvhEJq/Portfolio-Website?page-id=3687%3A2924&node-id=3687-3497&viewport=344%2C534%2C0.04&t=ape4QqqhklKEhhx0-1&scaling=contain&content-scaling=fixed' },
-  { thumb: asset('projects/sbnri-christmas.png'), gaEvent: 'sbnri_christmas_click', url: 'https://www.figma.com/proto/RiU7UIEjiiE1YgoJYORCK6/Christmas-Bonanza-PPT?page-id=0%3A1%3Fnode-id%3D30-25930&viewport=2699%2C-1299%2C0.46&t=rNobZYksRAHUk422-1&scaling=contain&content-scaling=fixed&node-id=30-25930' },
+  { thumb: asset(IS_MOBILE_VIEWPORT ? 'projects-mobile/sbnri-m.png' : 'projects/sbnri.png'), gaEvent: 'sbnri_revamp_click', url: 'https://www.figma.com/proto/jzS2IyxvAHpRGq1Tw7vZ5k/PPTs?node-id=131-12134&viewport=116%2C374%2C0.17&t=XTolNU1KEmk37Cuf-1&scaling=contain&content-scaling=fixed&page-id=131%3A12073' },
+  { thumb: asset(IS_MOBILE_VIEWPORT ? 'projects-mobile/pinelabs-m.png' : 'projects/pinelabs.png'), gaEvent: 'pinelabs_pos_click', url: 'https://www.figma.com/proto/UG9EtRhwPyYKmknhHvhEJq/Portfolio-Website?page-id=3787%3A4489&node-id=3787-4490&viewport=-15571%2C174%2C0.4&t=bFGy284DuOVPumnN-1&scaling=contain&content-scaling=fixed' },
+  { thumb: asset(IS_MOBILE_VIEWPORT ? 'projects-mobile/pinelabs-tms-m.png' : 'projects/pinelabs-tms.png'), gaEvent: 'pinelabs_tms_click', url: 'https://www.figma.com/proto/UG9EtRhwPyYKmknhHvhEJq/Portfolio-Website?page-id=3687%3A2924&node-id=3687-3497&viewport=344%2C534%2C0.04&t=ape4QqqhklKEhhx0-1&scaling=contain&content-scaling=fixed' },
+  { thumb: asset(IS_MOBILE_VIEWPORT ? 'projects-mobile/sbnri-christmas-m.png' : 'projects/sbnri-christmas.png'), gaEvent: 'sbnri_christmas_click', url: 'https://www.figma.com/proto/RiU7UIEjiiE1YgoJYORCK6/Christmas-Bonanza-PPT?page-id=0%3A1%3Fnode-id%3D30-25930&viewport=2699%2C-1299%2C0.46&t=rNobZYksRAHUk422-1&scaling=contain&content-scaling=fixed&node-id=30-25930' },
 ]
 
 // GA4 custom event, fired once per page load, when the visitor reaches 100% scroll — this
@@ -573,7 +583,9 @@ function DeskScene({ lampOn, setLampOn }) {
   }, [projTex])
   // Résumé mapped onto the standee page (GEO_StandeePage, UVs span 0..1 from local X→U, Z→V).
   // flipY=false orients it upright (V maps local Z, unlike the laptop screen's local-Y mapping).
-  const resumeTex = useTexture(asset('projects/resume.png?v=3'))
+  // MOBILE-SHARPER (2026-08-14): projects-mobile/resume-m.png is the same art at 2x resolution
+  // (1680x2260 -> 3360x4520) — see the long note above PROJECTS for why. Desktop is unaffected.
+  const resumeTex = useTexture(asset(IS_MOBILE_VIEWPORT ? 'projects-mobile/resume-m.png' : 'projects/resume.png?v=3'))
   useMemo(() => {
     resumeTex.colorSpace = THREE.SRGBColorSpace
     resumeTex.flipY = false
