@@ -36,7 +36,72 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="theme-color" content="#0e1116" />
-    <title>Himanshu's Portfolio</title>
+
+    <!-- ── SEO (2026-08-14) ──────────────────────────────────────────────────────────────────
+         Why this needs more than the usual meta tags: this entire site is a WebGL canvas. The
+         résumé, project names, bio — everything a visitor actually reads — is baked into 3D
+         textures, not real DOM text. Even though Googlebot executes JS, there is still no text
+         for it to read once it does, because none of this content is HTML. So on top of the
+         normal tags, there's a visually-hidden (not display:none — a proper accessible-hidden
+         technique) text block in <body> below that duplicates the résumé content in real HTML,
+         purely so search engines have something to index. Keep it in sync with the résumé
+         standee / PROJECTS array in src/App.jsx if either changes. -->
+    <title>Himanshu Shakit — Senior Product Designer Portfolio</title>
+    <meta name="description" content="Portfolio of Himanshu Shakit, a Senior Product Designer with experience at Pine Labs, SBNRI, and Curelink. A scroll-driven 3D desk experience featuring product design case studies." />
+    <link rel="canonical" href="https://himanshushakit.com/" />
+    <meta name="robots" content="index, follow" />
+
+    <!-- Open Graph (LinkedIn, WhatsApp, Facebook link previews) -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://himanshushakit.com/" />
+    <meta property="og:site_name" content="Himanshu Shakit" />
+    <meta property="og:title" content="Himanshu Shakit — Senior Product Designer Portfolio" />
+    <meta property="og:description" content="Portfolio of Himanshu Shakit, a Senior Product Designer with experience at Pine Labs, SBNRI, and Curelink. A scroll-driven 3D desk experience featuring product design case studies." />
+    <meta property="og:image" content="https://himanshushakit.com/og-image.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:locale" content="en_US" />
+
+    <!-- Twitter/X card -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Himanshu Shakit — Senior Product Designer Portfolio" />
+    <meta name="twitter:description" content="Portfolio of Himanshu Shakit, a Senior Product Designer with experience at Pine Labs, SBNRI, and Curelink." />
+    <meta name="twitter:image" content="https://himanshushakit.com/og-image.png" />
+
+    <!-- Structured data (schema.org Person) — helps Google associate this site with searches
+         for the person's name specifically (knowledge-panel-style results), not just keywords. -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Person",
+      "name": "Himanshu Krishna Shakit",
+      "alternateName": "Himanshu Shakit",
+      "url": "https://himanshushakit.com/",
+      "image": "https://himanshushakit.com/og-image.png",
+      "jobTitle": "Senior Product Designer",
+      "email": "mailto:himanshu.k.shakit@gmail.com",
+      "alumniOf": {
+        "@type": "CollegeOrUniversity",
+        "name": "Indian Institute of Technology Roorkee"
+      },
+      "worksFor": {
+        "@type": "Organization",
+        "name": "bachatt"
+      },
+      "knowsAbout": ["Product Design", "UX Design", "UI Design", "Design Systems", "Fintech Design"]
+    }
+    </script>
+
+    <!-- Immediate, zero-flash hiding for the crawlable text block below — inline so it applies
+         before styles.css (loaded via main.jsx) has a chance to arrive. clip-path + absolute
+         positioning (not display:none) is the standard "hidden but not discounted by crawlers"
+         technique, same pattern as a screen-reader-only utility class. -->
+    <style>
+      .seo-content {
+        position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0;
+        overflow: hidden; clip: rect(0, 0, 0, 0); clip-path: inset(50%); white-space: nowrap; border: 0;
+      }
+    </style>
     <!-- Alan Sans SemiBold (600, weather selector / most UI text) + Light (300, boot loader
          subtitle — see .loader-subtitle) — swap-on-load so neither blocks first paint. -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -44,6 +109,37 @@
     <link href="https://fonts.googleapis.com/css2?family=Alan+Sans:wght@300;600&display=swap" rel="stylesheet" />
   </head>
   <body>
+    <!-- SEO fallback content — see the note above the <title> tag for why this exists. Visually
+         hidden (.seo-content, defined above) but present in the real DOM, so it renders and is
+         readable with zero JS execution. Keep this in sync with the résumé standee content and
+         the PROJECTS array in src/App.jsx if either changes — this is necessarily a duplicate,
+         since this file is static HTML and that data lives in JS. -->
+    <div class="seo-content">
+      <h1>Himanshu Krishna Shakit — Senior Product Designer</h1>
+      <p>
+        Product designer based in India, B.Tech from IIT Roorkee (Aug 2018 – May 2022).
+        Currently Senior Product Designer at bachatt. This portfolio is a scroll-driven,
+        cinematic 3D experience of a cozy desk facing a window, featuring case studies from
+        fintech and consumer product design work.
+      </p>
+      <h2>Experience</h2>
+      <ul>
+        <li>bachatt — Senior Product Designer (May 2026 – Present)</li>
+        <li>SBNRI — Senior Product Designer (Oct 2025 – Feb 2026)</li>
+        <li>Pine Labs — Senior Product Designer (Mar 2025 – Sep 2025)</li>
+        <li>Pine Labs — Product Designer (Feb 2023 – Mar 2025)</li>
+        <li>Curelink — Product Designer (May 2022 – Feb 2023)</li>
+        <li>apna — Product Design Intern (Jun 2021 – Sep 2021)</li>
+      </ul>
+      <h2>Case studies</h2>
+      <ul>
+        <li><a href="https://www.figma.com/proto/jzS2IyxvAHpRGq1Tw7vZ5k/PPTs?node-id=131-12134&viewport=116%2C374%2C0.17&t=XTolNU1KEmk37Cuf-1&scaling=contain&content-scaling=fixed&page-id=131%3A12073">SBNRI Revamp</a></li>
+        <li><a href="https://www.figma.com/proto/UG9EtRhwPyYKmknhHvhEJq/Portfolio-Website?page-id=3787%3A4489&node-id=3787-4490&viewport=-15571%2C174%2C0.4&t=bFGy284DuOVPumnN-1&scaling=contain&content-scaling=fixed">Pine Labs POS</a></li>
+        <li><a href="https://www.figma.com/proto/UG9EtRhwPyYKmknhHvhEJq/Portfolio-Website?page-id=3687%3A2924&node-id=3687-3497&viewport=344%2C534%2C0.04&t=ape4QqqhklKEhhx0-1&scaling=contain&content-scaling=fixed">Pine Labs TMS (Terminal Management Dashboard)</a></li>
+        <li><a href="https://www.figma.com/proto/RiU7UIEjiiE1YgoJYORCK6/Christmas-Bonanza-PPT?page-id=0%3A1%3Fnode-id%3D30-25930&viewport=2699%2C-1299%2C0.46&t=rNobZYksRAHUk422-1&scaling=contain&content-scaling=fixed&node-id=30-25930">SBNRI Christmas Bonanza Campaign</a></li>
+      </ul>
+      <p>Contact: <a href="mailto:himanshu.k.shakit@gmail.com">himanshu.k.shakit@gmail.com</a></p>
+    </div>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
   </body>
